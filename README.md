@@ -1,0 +1,2 @@
+# osu-nhauto
+Nhato
