@@ -11,8 +11,8 @@
         </Grid.ColumnDefinitions>
         <TextBlock x:Name="StatusWindow" Padding="10,5,0,0" Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" MaxHeight="159" MinHeight="150"/>
         <StackPanel Margin="10,0,0,10" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="198" UseLayoutRounding="False">
-            <Button x:Name="RelaxButton" Content="Enable Relax" FontSize="14" MinHeight="22.4" Margin="0" VerticalAlignment="Top" Height="30"/>
-            <Button x:Name="AutoPilotButton" Content="Enable AutoPilot" FontSize="14" MinHeight="22.4" Margin="0,5,0,0" Height="30" VerticalAlignment="Bottom"/>
+            <Button x:Name="AutoPilotButton" Content="Enable AutoPilot" FontSize="14" MinHeight="22.4" Margin="0" Height="30" VerticalAlignment="Top"/>
+            <Button x:Name="RelaxButton" Content="Enable Relax" FontSize="14" MinHeight="22.4" Margin="0,5,0,0" VerticalAlignment="Bottom" Height="30"/>
         </StackPanel>
         <Grid Margin="0,0,10,10" VerticalAlignment="Bottom" RenderTransformOrigin="0.253,0.037" HorizontalAlignment="Right" Width="110" Height="65">
             <Label x:Name="KeyLabel1" Content="Key 1:" Margin="8,1,0,0" VerticalAlignment="Top" Background="#00000000" Foreground="White" HorizontalAlignment="Left" Height="30" FontSize="14"/>
