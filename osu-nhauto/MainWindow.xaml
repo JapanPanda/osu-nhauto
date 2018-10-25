@@ -9,8 +9,15 @@
     <Grid>
         <Grid.ColumnDefinitions>
         </Grid.ColumnDefinitions>
-        <StackPanel Grid.ColumnSpan="2">
-            <TextBlock x:Name="statusWindow" Padding="10,5,0,0" Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="241" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" FontSize="24"/>
-        </StackPanel>
+        <TextBlock x:Name="StatusWindow" Padding="10,5,0,0" Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="241" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" FontSize="24"/>
+
+
+        <Button x:Name="RelaxButton" Content="Enable Relax" Margin="10,309,436,206" FontSize="14"/>
+        <Button x:Name="AutoPilotButton" Content="Enable AutoPilot" Margin="225,309,221,206" FontSize="14"/>
+        <Label x:Name="KeyLabel1" Content="Key 1" HorizontalAlignment="Left" Margin="10,396,0,0" VerticalAlignment="Top" FontSize="18" Background="#00000000" Foreground="White"/>
+        <Label x:Name="KeyLabel2" Content="Key 2" HorizontalAlignment="Left" Margin="68,396,0,0" VerticalAlignment="Top" FontSize="18" Background="#00000000" Foreground="White"/>
+        <TextBox x:Name="Key1TextBox" TextAlignment="Center" MaxLength="1" HorizontalAlignment="Left" Height="32" Margin="10,430,0,0" TextWrapping="Wrap" Text="Z" VerticalAlignment="Top" Width="53" FontSize="18" GotFocus="InputBox_GotFocus"/>
+        <TextBox x:Name="Key2TextBox" TextAlignment="Center" MaxLength="1" HorizontalAlignment="Left" Height="32" Margin="68,430,0,0" TextWrapping="Wrap" Text="X" VerticalAlignment="Top" Width="53" FontSize="18" GotFocus="InputBox_GotFocus"/>
+        <Button x:Name="ApplyChanges" Content="Apply Changes" HorizontalAlignment="Left" Margin="10,477,0,0" VerticalAlignment="Top" Width="111" Height="43"/>
     </Grid>
 </Window>
