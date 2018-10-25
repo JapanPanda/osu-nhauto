@@ -121,7 +121,14 @@ namespace osu_nhauto
 
             void ApplyChanges_Click(object sender, RoutedEventArgs e)
             {
-                if (!Regex.IsMatch(Main.Key1TextBox.Text, @"^[a-zA-Z]+$"))
+                if (!Regex.IsMatch(Main.Key1TextBox.Text, @"^[a-zA-Z]+$") && !Regex.IsMatch(Main.Key2TextBox.Text, @"^[a-zA-Z]+$"))
+                {
+                    MessageBox.Show("Invalid Input for Key 1: " + Main.Key1TextBox.Text[0] + " and Key 2: " + Main.Key2TextBox.Text[0] + "\nA-Z only please",
+                                         "Ok",
+                                         MessageBoxButton.OK,
+                                         MessageBoxImage.Error);
+                }
+                else if (!Regex.IsMatch(Main.Key1TextBox.Text, @"^[a-zA-Z]+$"))
                 {
                     MessageBox.Show("Invalid Input for Key 1: " + Main.Key1TextBox.Text[0] + "\nA-Z only please",
                                          "Ok",
