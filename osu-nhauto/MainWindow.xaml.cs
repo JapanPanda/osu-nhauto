@@ -21,11 +21,9 @@ namespace osu_nhauto
     /// </summary>
     public partial class MainWindow : Window
     {
-
         internal static MainWindow Main;
 
         class StatusHandler {
-
 
             public StatusHandler()
             {
@@ -66,14 +64,12 @@ namespace osu_nhauto
 
             }
             
-
-
-            public void toggleAutoPilot() { this.autopilotRunning = !this.autopilotRunning; }
-            public void toggleRelax() { this.relaxRunning = !this.relaxRunning; }
-            public void setKey1(char key) { this.key1 = key; }
-            public void setKey2(char key) { this.key2 = key; }
-            public bool isAutoPilotRunning() { return this.autopilotRunning; }
-            public bool isRelaxRunning() { return this.relaxRunning; }
+            public void toggleAutoPilot() => this.autopilotRunning = !this.autopilotRunning;
+            public void toggleRelax() => this.relaxRunning = !this.relaxRunning;
+            public void setKey1(char key) => this.key1 = key;
+            public void setKey2(char key) => this.key2 = key;
+            public bool isAutoPilotRunning() => this.autopilotRunning;
+            public bool isRelaxRunning() => this.relaxRunning;
 
             private char key1;
             private char key2;
@@ -81,8 +77,7 @@ namespace osu_nhauto
             private bool relaxRunning;
         }
 
-
-        public void main()
+        public void InitializeEvents()
         {
             // status is name of status window text block
             StatusHandler status = new StatusHandler();
@@ -90,64 +85,43 @@ namespace osu_nhauto
             status.updateWindow();
             RelaxButton.Click += RelaxButton_Click;
             AutoPilotButton.Click += AutoPilotButton_Click;
-            ApplyChanges.Click += ApplyChanges_Click;
+
+            Key1TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
+            Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
 
             void RelaxButton_Click(object sender, RoutedEventArgs e)
             {
-                if (status.isRelaxRunning()) {
-                    RelaxButton.Content = "Enable Relax";
-                }
-                else
-                {
-                    RelaxButton.Content = "Disable Relax";
-                }
+                RelaxButton.Content = status.isRelaxRunning() ? "Enable Relax" : "Disable Relax";
                 status.toggleRelax();
                 status.updateWindow();
             }
 
             void AutoPilotButton_Click(object sender, RoutedEventArgs e)
             {
-                if (status.isAutoPilotRunning())
-                {
-                    AutoPilotButton.Content = "Enable AutoPilot";
-                }
-                else
-                {
-                    AutoPilotButton.Content = "Disable AutoPilot";
-                }
+                AutoPilotButton.Content = status.isAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
                 status.toggleAutoPilot();
                 status.updateWindow();
             }
 
-            void ApplyChanges_Click(object sender, RoutedEventArgs e)
+            void TextBox_OnKeyPress(object sender, KeyEventArgs e)
             {
-                if (!Regex.IsMatch(Main.Key1TextBox.Text, @"^[a-zA-Z]+$") && !Regex.IsMatch(Main.Key2TextBox.Text, @"^[a-zA-Z]+$"))
+                TextBox txtBox = (TextBox)sender;
+                string key = e.Key.ToString();
+
+                if (Regex.IsMatch(key, "^D[0-9]"))
                 {
-                    MessageBox.Show("Invalid Input for Key 1: " + Main.Key1TextBox.Text[0] + " and Key 2: " + Main.Key2TextBox.Text[0] + "\nA-Z only please",
-                                         "Ok",
-                                         MessageBoxButton.OK,
-                                         MessageBoxImage.Error);
+                    key = key.Substring(1);
                 }
-                else if (!Regex.IsMatch(Main.Key1TextBox.Text, @"^[a-zA-Z]+$"))
+                else if (key.Length > 1)
                 {
-                    MessageBox.Show("Invalid Input for Key 1: " + Main.Key1TextBox.Text[0] + "\nA-Z only please",
-                                         "Ok",
-                                         MessageBoxButton.OK,
-                                         MessageBoxImage.Error);
+                    MessageBox.Show("Invalid input. Alphanumeric input only.", "Error!", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
                 }
-                else if (!Regex.IsMatch(Main.Key2TextBox.Text, @"^[a-zA-Z]+$"))
-                {
-                    MessageBox.Show("Invalid Input for Key 2: " + Main.Key2TextBox.Text[0] + "\nA-Z only please",
-                                         "Ok",
-                                         MessageBoxButton.OK,
-                                         MessageBoxImage.Error);
-                }
-                else
-                {
-                    status.setKey1(Main.Key1TextBox.Text[0]);
-                    status.setKey2(Main.Key2TextBox.Text[0]);
-                    status.updateWindow();
-                }
+
+                txtBox.Text = key.ToUpper();
+                status.setKey1(Main.Key1TextBox.Text[0]);
+                status.setKey2(Main.Key2TextBox.Text[0]);
+                status.updateWindow();
             }
         }
 
@@ -155,8 +129,7 @@ namespace osu_nhauto
         {
             Main = this;
             InitializeComponent();
-
-            main();
+            InitializeEvents();
         }
 
         private void InputBox_GotFocus(object sender, RoutedEventArgs e)
@@ -164,6 +137,5 @@ namespace osu_nhauto
             TextBox text = (TextBox)sender;
             text.Text = string.Empty;
         }
-
     }
 }

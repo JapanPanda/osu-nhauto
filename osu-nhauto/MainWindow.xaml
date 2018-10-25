@@ -5,19 +5,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:osu_nhauto"
         mc:Ignorable="d"
-        Title="MainWindow" Height="600" Width="600" Background="#FF2E2D2D">
+        Title="MainWindow" Height="280" Width="339.2" Background="#FF2E2D2D" VerticalAlignment="Center" HorizontalAlignment="Center">
     <Grid>
         <Grid.ColumnDefinitions>
         </Grid.ColumnDefinitions>
-        <TextBlock x:Name="StatusWindow" Padding="10,5,0,0" Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="241" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" FontSize="24"/>
-
-
-        <Button x:Name="RelaxButton" Content="Enable Relax" Margin="10,309,436,206" FontSize="14"/>
-        <Button x:Name="AutoPilotButton" Content="Enable AutoPilot" Margin="225,309,221,206" FontSize="14"/>
-        <Label x:Name="KeyLabel1" Content="Key 1" HorizontalAlignment="Left" Margin="10,396,0,0" VerticalAlignment="Top" FontSize="18" Background="#00000000" Foreground="White"/>
-        <Label x:Name="KeyLabel2" Content="Key 2" HorizontalAlignment="Left" Margin="68,396,0,0" VerticalAlignment="Top" FontSize="18" Background="#00000000" Foreground="White"/>
-        <TextBox x:Name="Key1TextBox" TextAlignment="Center" MaxLength="1" HorizontalAlignment="Left" Height="32" Margin="10,430,0,0" TextWrapping="Wrap" Text="Z" VerticalAlignment="Top" Width="53" FontSize="18" GotFocus="InputBox_GotFocus"/>
-        <TextBox x:Name="Key2TextBox" TextAlignment="Center" MaxLength="1" HorizontalAlignment="Left" Height="32" Margin="68,430,0,0" TextWrapping="Wrap" Text="X" VerticalAlignment="Top" Width="53" FontSize="18" GotFocus="InputBox_GotFocus"/>
-        <Button x:Name="ApplyChanges" Content="Apply Changes" HorizontalAlignment="Left" Margin="10,477,0,0" VerticalAlignment="Top" Width="111" Height="43"/>
+        <TextBlock x:Name="StatusWindow" Padding="10,5,0,0" Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" MaxHeight="159" MinHeight="150"/>
+        <StackPanel Margin="10,0,0,10" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="198" UseLayoutRounding="False">
+            <Button x:Name="RelaxButton" Content="Enable Relax" FontSize="14" MinHeight="22.4" Margin="0" VerticalAlignment="Top" Height="30"/>
+            <Button x:Name="AutoPilotButton" Content="Enable AutoPilot" FontSize="14" MinHeight="22.4" Margin="0,5,0,0" Height="30" VerticalAlignment="Bottom"/>
+        </StackPanel>
+        <Grid Margin="0,0,10,10" VerticalAlignment="Bottom" RenderTransformOrigin="0.253,0.037" HorizontalAlignment="Right" Width="110" Height="65">
+            <Label x:Name="KeyLabel1" Content="Key 1:" Margin="8,1,0,0" VerticalAlignment="Top" Background="#00000000" Foreground="White" HorizontalAlignment="Left" Height="30" FontSize="14"/>
+            <Label x:Name="KeyLabel2" Content="Key 2:" Margin="8,0,0,0" VerticalAlignment="Bottom" FontSize="14" Background="#00000000" Foreground="White" HorizontalAlignment="Left"/>
+            <TextBox x:Name="Key1TextBox" TextAlignment="Center" MaxLength="6" Height="30" TextWrapping="Wrap" Text="Z" VerticalAlignment="Top" Width="52" FontSize="14" HorizontalAlignment="Right" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLines="1" IsReadOnlyCaretVisible="True" IsReadOnly="True" GotFocus="InputBox_GotFocus"/>
+            <TextBox x:Name="Key2TextBox" TextAlignment="Center" MaxLength="6" Height="30" TextWrapping="Wrap" Text="X" VerticalAlignment="Bottom" Width="52" FontSize="14" HorizontalAlignment="Right" Margin="0" RenderTransformOrigin="0.5,0.5" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" CharacterCasing="Upper" MaxLines="1" IsReadOnly="True" IsReadOnlyCaretVisible="True" GotFocus="InputBox_GotFocus"/>
+        </Grid>
     </Grid>
 </Window>
