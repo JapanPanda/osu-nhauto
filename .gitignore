@@ -328,3 +328,7 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+# User-defined
+References/osu!.exe
+/osu-nhauto/References/osu!.exe

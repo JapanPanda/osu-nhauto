@@ -22,14 +22,12 @@ namespace osu_nhauto {
             relaxRunning = false;
             key1 = 'Z';
             key2 = 'X';
-            updateGameState();
         }
 
-        public void updateWindow(FileParser fileParser)
+        public void UpdateWindow()
         {
             Main.StatusWindow.Text = string.Empty;
             Main.StatusWindow.Inlines.Add(new Run("osu! Window Status: ") { FontWeight = FontWeights.Bold });
-            updateGameState();
             switch (state)
             {
                 case GameState.NotOpen:
@@ -53,7 +51,7 @@ namespace osu_nhauto {
             }
             else
             {
-                string fileName = fileParser.GetFileName();
+                string fileName = MainWindow.fileParser.GetFileName();
                 Console.WriteLine(fileName);
                 if (fileName == "Duplicate Folders Found")
                 {
@@ -101,14 +99,13 @@ namespace osu_nhauto {
 
         }
 
-        public GameState updateGameState()
+        public GameState UpdateGameState()
         {
-            Process[] osuWindow = Process.GetProcessesByName("osu!");
-            if (osuWindow.Length == 0)
+            if (MainWindow.osuProcess == null)
             {
                 state = GameState.NotOpen;
             }
-            else if (osuWindow[0].MainWindowTitle.IndexOf("-", StringComparison.InvariantCulture) > -1)
+            else if (MainWindow.osuProcess.MainWindowTitle.IndexOf("-", StringComparison.InvariantCulture) > -1)
             {
                 state = GameState.Playing;
             }
@@ -120,7 +117,6 @@ namespace osu_nhauto {
         }
 
         public GameState GetGameState() => state;
-        public void SetGameState(GameState status) => state = status;
         public void ToggleAutoPilot() => this.autopilotRunning = !this.autopilotRunning;
         public void ToggleRelax() => this.relaxRunning = !this.relaxRunning;
         public char GetKey1() => this.key1;
@@ -134,6 +130,6 @@ namespace osu_nhauto {
         private char key2;
         private bool autopilotRunning;
         private bool relaxRunning;
-        private GameState state;
+        private GameState state = GameState.NotOpen;
     }
 }

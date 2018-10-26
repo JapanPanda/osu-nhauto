@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
+using osu_database_reader.BinaryFiles;
+
 namespace osu_nhauto
 {
     public class FileParser
@@ -14,17 +16,18 @@ namespace osu_nhauto
             Main = mw;
         }
 
-        public void GetBaseFilePath(Process osuProcess)
+        public void GetBaseFilePath()
         {
-            this.baseFilePath = osuProcess.MainModule.FileName;
-            // Trims osu!.exe at the end
-            this.baseFilePath = this.baseFilePath.Substring(0, this.baseFilePath.Length - 8);
+            this.baseFilePath = MainWindow.osuProcess.MainModule.FileName.Substring(0, MainWindow.osuProcess.MainModule.FileName.Length - 8);
             Console.WriteLine(baseFilePath);
         }
 
-        public string FindFilePath(string windowTitle)
+        public string FindFilePath()
         {
+            if (this.baseFilePath == null)
+                GetBaseFilePath();
 
+            string windowTitle = MainWindow.osuProcess.MainWindowTitle;
             string strippedWindowTitle = windowTitle.Substring(8);
             string difficultyStrippedTitle = string.Empty;
             string difficulty = string.Empty;
@@ -59,6 +62,6 @@ namespace osu_nhauto
         public string GetFileName() => this.fileName;
 
         private string fileName;
-        private string baseFilePath;
+        private string baseFilePath = null;
     }
 }
