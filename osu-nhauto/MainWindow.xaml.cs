@@ -42,7 +42,19 @@ namespace osu_nhauto
 
             bool foundFilePath = false;
 
-            Process osuProcess = Process.GetProcessesByName("osu!")[0];
+            Process[] processes = Process.GetProcessesByName("osu!");
+            Process osuProcess = null;
+            if (processes.Length > 1)
+            {
+                MessageBox.Show("Multiple processes with the name osu! found!",
+                                          "Multiple Processes Open",
+                                          MessageBoxButton.OK,
+                                          MessageBoxImage.Error);
+            }
+            else if (processes.Length == 1)
+            {
+                osuProcess = processes[0];
+            }
             new Thread(() =>
             {
 
@@ -59,7 +71,7 @@ namespace osu_nhauto
                             fileParser.FindFilePath(osuProcess.MainWindowTitle);
                         }
                     }
-                    if (pastStatus != statusHandler.updateGameState())
+                    else if (pastStatus != statusHandler.updateGameState())
                     {
                         this.Dispatcher.Invoke(() =>
                         {
