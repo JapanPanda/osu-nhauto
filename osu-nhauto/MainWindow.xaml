@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:osu_nhauto"
         mc:Ignorable="d"
-        Title="osu!nhauto" Height="280" Width="339.2" Background="#FF2E2D2D" VerticalAlignment="Center" HorizontalAlignment="Center" ResizeMode="NoResize">
-    <Grid>
+        Title="osu!nhauto" Height="280" Width="339.2" Background="#FF2E2D2D" VerticalAlignment="Center" HorizontalAlignment="Center" ResizeMode="NoResize" MouseDown="Window_MouseDown">
+    <Grid Name="MainGrid" Focusable="True">
         <Grid.ColumnDefinitions>
         </Grid.ColumnDefinitions>
         <TextBlock x:Name="StatusWindow" Padding="10,5,0,0" Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" MaxHeight="159" MinHeight="150"/>

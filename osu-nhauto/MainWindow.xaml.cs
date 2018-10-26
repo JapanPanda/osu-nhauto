@@ -100,5 +100,10 @@ namespace osu_nhauto
             TextBox text = (TextBox)sender;
             text.Text = string.Empty;
         }
+
+        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            MainGrid.Focus();
+        }
     }
 }
