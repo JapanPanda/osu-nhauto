@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-using osu_database_reader.BinaryFiles;
-
 namespace osu_nhauto
 {
     public class FileParser
@@ -16,10 +14,13 @@ namespace osu_nhauto
             Main = mw;
         }
 
-        public void GetBaseFilePath()
+        public string GetBaseFilePath()
         {
-            this.baseFilePath = MainWindow.osuProcess.MainModule.FileName.Substring(0, MainWindow.osuProcess.MainModule.FileName.Length - 8);
+            if (this.baseFilePath == null)
+                this.baseFilePath = MainWindow.osuProcess.MainModule.FileName.Substring(0, MainWindow.osuProcess.MainModule.FileName.Length - 8);
+
             Console.WriteLine(baseFilePath);
+            return this.baseFilePath;
         }
 
         public string FindFilePath()

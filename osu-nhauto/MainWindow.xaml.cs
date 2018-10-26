@@ -27,6 +27,7 @@ namespace osu_nhauto
         public static StatusHandler statusHandler;
         public static FileParser fileParser;
         public static Process osuProcess = null;
+        public static string currentBeatmapPath = null;
 
         public MainWindow()
         {
@@ -58,7 +59,11 @@ namespace osu_nhauto
                     if (pastStatus != statusHandler.UpdateGameState())
                     {
                         if (statusHandler.GetGameState() == GameState.Playing)
-                            fileParser.FindFilePath();
+                        {
+                            CurrentBeatmap beatmap = new CurrentBeatmap();
+                            currentBeatmapPath = beatmap.Get();
+                            beatmap.Parse(); // TODO you know what to do boys
+                        }                          
 
                         pastStatus = statusHandler.GetGameState();
                         this.Dispatcher.Invoke(statusHandler.UpdateWindow);

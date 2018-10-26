@@ -51,8 +51,7 @@ namespace osu_nhauto {
             }
             else
             {
-                string fileName = MainWindow.fileParser.GetFileName();
-                Console.WriteLine(fileName);
+                string fileName = MainWindow.currentBeatmapPath;
                 if (fileName == "Duplicate Folders Found")
                 {
                     Main.StatusWindow.Inlines.Add(new Run("Duplicate Song Folders Found") { Foreground = Brushes.Red });
