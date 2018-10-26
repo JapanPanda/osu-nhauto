@@ -49,7 +49,7 @@ namespace osu_nhauto
                         this.Dispatcher.Invoke(() =>
                         {
                             statusHandler.updateWindow();
-                            pastStatus = statusHandler.getGameState();
+                            pastStatus = statusHandler.GetGameState();
                         });
                     }
                     Thread.Sleep(100);
@@ -58,15 +58,15 @@ namespace osu_nhauto
 
             void RelaxButton_Click(object sender, RoutedEventArgs e)
             {
-                RelaxButton.Content = statusHandler.isRelaxRunning() ? "Enable Relax" : "Disable Relax";
-                statusHandler.toggleRelax();
+                RelaxButton.Content = statusHandler.IsRelaxRunning() ? "Enable Relax" : "Disable Relax";
+                statusHandler.ToggleRelax();
                 statusHandler.updateWindow();
             }
 
             void AutoPilotButton_Click(object sender, RoutedEventArgs e)
             {
-                AutoPilotButton.Content = statusHandler.isAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
-                statusHandler.toggleAutoPilot();
+                AutoPilotButton.Content = statusHandler.IsAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
+                statusHandler.ToggleAutoPilot();
                 statusHandler.updateWindow();
             }
 
@@ -86,16 +86,16 @@ namespace osu_nhauto
                 }
 
                 txtBox.Text = key.ToUpper();
-                statusHandler.setKey1(Key1TextBox.Text[0]);
-                statusHandler.setKey2(Key2TextBox.Text[0]);
+                statusHandler.SetKey1(Key1TextBox.Text[0]);
+                statusHandler.SetKey2(Key2TextBox.Text[0]);
                 statusHandler.updateWindow();
                 MainGrid.Focus();
             }
 
             void TextBox_OnLostFocus(object sender, EventArgs e)
             {
-                Key1TextBox.Text = statusHandler.getKey1().ToString();
-                Key2TextBox.Text = statusHandler.getKey2().ToString();
+                Key1TextBox.Text = statusHandler.GetKey1().ToString();
+                Key2TextBox.Text = statusHandler.GetKey2().ToString();
             }
         }
         
