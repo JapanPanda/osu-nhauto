@@ -37,6 +37,14 @@ namespace osu_nhauto
 
             Key1TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
+            Key1TextBox.LostFocus += TextBox_OnLostFocus;
+            Key2TextBox.LostFocus += Tebool foundFilePath = false;
+
+            Process osuProcess = Process.GetProcessesByName("osu!")[0];
+            xtBox_OnLostFocus;
+
+            Key1TextBox.LostFocus += TextBox_OnLostFocus;
+            Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
             bool foundFilePath = false;
 
@@ -77,15 +85,15 @@ namespace osu_nhauto
 
             void RelaxButton_Click(object sender, RoutedEventArgs e)
             {
-                RelaxButton.Content = statusHandler.isRelaxRunning() ? "Enable Relax" : "Disable Relax";
-                statusHandler.toggleRelax();
+                RelaxButton.Content = statusHandler.IsRelaxRunning() ? "Enable Relax" : "Disable Relax";
+                statusHandler.ToggleRelax();
                 statusHandler.updateWindow(fileParser);
             }
 
             void AutoPilotButton_Click(object sender, RoutedEventArgs e)
             {
                 AutoPilotButton.Content = statusHandler.isAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
-                statusHandler.toggleAutoPilot();
+                statusHandler.ToggleAutoPilot();
                 statusHandler.updateWindow(fileParser);
             }
 
@@ -109,6 +117,12 @@ namespace osu_nhauto
                 statusHandler.setKey2(Key2TextBox.Text[0]);
                 statusHandler.updateWindow(fileParser);
                 MainGrid.Focus();
+            }
+
+            void TextBox_OnLostFocus(object sender, EventArgs e)
+            {
+                Key1TextBox.Text = statusHandler.GetKey1().ToString();
+                Key2TextBox.Text = statusHandler.GetKey2().ToString();
             }
         }
         

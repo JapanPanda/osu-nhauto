@@ -8,7 +8,7 @@ namespace osu_nhauto {
 
     public enum GameState
     {
-        PLAYING, IDLE, NOT_OPEN
+        Playing, Idle, NotOpen
     }
 
     public class StatusHandler
@@ -32,13 +32,13 @@ namespace osu_nhauto {
             updateGameState();
             switch (state)
             {
-                case GameState.NOT_OPEN:
+                case GameState.NotOpen:
                     Main.StatusWindow.Inlines.Add(new Run("Not Open") { Foreground = Brushes.Red });
                     break;
-                case GameState.IDLE:
+                case GameState.Idle:
                     Main.StatusWindow.Inlines.Add(new Run("Idle") { Foreground = Brushes.Gray });
                     break;
-                case GameState.PLAYING:
+                case GameState.Playing:
                     Main.StatusWindow.Inlines.Add(new Run("Playing") { Foreground = Brushes.Green });
                     break;
                 default:
@@ -106,27 +106,29 @@ namespace osu_nhauto {
             Process[] osuWindow = Process.GetProcessesByName("osu!");
             if (osuWindow.Length == 0)
             {
-                state = GameState.NOT_OPEN;
+                state = GameState.NotOpen;
             }
             else if (osuWindow[0].MainWindowTitle.IndexOf("-", StringComparison.InvariantCulture) > -1)
             {
-                state = GameState.PLAYING;
+                state = GameState.Playing;
             }
             else
             {
-                state = GameState.IDLE;
+                state = GameState.Idle;
             }
             return state;
         }
 
-        public GameState getGameState() => state;
-        public void setGameState(GameState status) => state = status;
-        public void toggleAutoPilot() => this.autopilotRunning = !this.autopilotRunning;
-        public void toggleRelax() => this.relaxRunning = !this.relaxRunning;
-        public void setKey1(char key) => this.key1 = key;
-        public void setKey2(char key) => this.key2 = key;
-        public bool isAutoPilotRunning() => this.autopilotRunning;
-        public bool isRelaxRunning() => this.relaxRunning;
+        public GameState GetGameState() => state;
+        public void SetGameState(GameState status) => state = status;
+        public void ToggleAutoPilot() => this.autopilotRunning = !this.autopilotRunning;
+        public void ToggleRelax() => this.relaxRunning = !this.relaxRunning;
+        public char GetKey1() => this.key1;
+        public char GetKey2() => this.key2;
+        public void SetKey1(char key) => this.key1 = key;
+        public void SetKey2(char key) => this.key2 = key;
+        public bool IsAutoPilotRunning() => this.autopilotRunning;
+        public bool IsRelaxRunning() => this.relaxRunning;
 
         private char key1;
         private char key2;
