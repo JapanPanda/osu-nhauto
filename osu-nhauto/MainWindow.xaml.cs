@@ -151,5 +151,14 @@ namespace osu_nhauto
         {
             MainGrid.Focus();
         }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+
+            App.Current.Shutdown();
+            Process.GetCurrentProcess().Kill();
+        }
+
     }
 }
