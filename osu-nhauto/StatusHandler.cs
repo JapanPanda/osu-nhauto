@@ -25,7 +25,7 @@ namespace osu_nhauto {
             updateGameState();
         }
 
-        public void updateWindow()
+        public void updateWindow(FileParser fileParser)
         {
             Main.StatusWindow.Text = string.Empty;
             Main.StatusWindow.Inlines.Add(new Run("osu! Window Status: ") { FontWeight = FontWeights.Bold });
@@ -44,6 +44,33 @@ namespace osu_nhauto {
                 default:
                     Main.StatusWindow.Inlines.Add(new Run("UNKNOWN ? ? ?") { Foreground = Brushes.DarkRed });
                     break;
+            }
+            Main.StatusWindow.Inlines.Add("\n");
+            Main.StatusWindow.Inlines.Add(new Run("Beatmap Loaded: ") { FontWeight = FontWeights.Bold });
+            if (state != GameState.PLAYING)
+            {
+                Main.StatusWindow.Inlines.Add(new Run("None") { Foreground = Brushes.Gray });
+            }
+            else
+            {
+                string fileName = fileParser.getFileName();
+                Console.WriteLine(fileName);
+                if (fileName == "Duplicate Folders Found")
+                {
+                    Main.StatusWindow.Inlines.Add(new Run("Duplicate Song Folders Found") { Foreground = Brushes.Red });
+                }
+                else if (fileName == "Duplicate .osu Files Found")
+                {
+                    Main.StatusWindow.Inlines.Add(new Run("Duplicate .osu Files Found") { Foreground = Brushes.Red });
+                }
+                else if (fileName != null)
+                {
+                    Main.StatusWindow.Inlines.Add(new Run(fileName) { Foreground = Brushes.Green });
+                }
+                else
+                {
+                    Main.StatusWindow.Inlines.Add(new Run("Retry the map to initialize") { Foreground = Brushes.Green });
+                }
             }
             Main.StatusWindow.Inlines.Add("\n");
             Main.StatusWindow.Inlines.Add(new Run("AutoPilot: ") { FontWeight = FontWeights.Bold });

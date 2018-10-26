@@ -25,31 +25,53 @@ namespace osu_nhauto
     public partial class MainWindow : Window
     {
         static StatusHandler statusHandler;
+        static FileParser fileParser;
 
         public void InitializeEvents()
         {
             statusHandler = new StatusHandler(this);
-            statusHandler.updateWindow();
+            fileParser = new FileParser(this);
+            statusHandler.updateWindow(fileParser);
             RelaxButton.Click += RelaxButton_Click;
             AutoPilotButton.Click += AutoPilotButton_Click;
 
             Key1TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
 
+            bool foundFilePath = false;
+
+            Process osuProcess = Process.GetProcessesByName("osu!")[0];
+
             new Thread(() =>
             {
+
                 GameState pastStatus = statusHandler.updateGameState();
+
                 while (true)
                 {
+                    if (!foundFilePath && pastStatus != GameState.NOT_OPEN)
+                    {
+                        fileParser.getBaseFilePath(osuProcess);
+                        foundFilePath = true;
+                        if (pastStatus == GameState.PLAYING)
+                        {
+                            fileParser.findFilePath(osuProcess.MainWindowTitle);
+                        }
+                    }
                     if (pastStatus != statusHandler.updateGameState())
                     {
                         this.Dispatcher.Invoke(() =>
                         {
-                            statusHandler.updateWindow();
+                            statusHandler.updateWindow(fileParser);
                             pastStatus = statusHandler.getGameState();
+                            if (pastStatus == GameState.PLAYING)
+                            {
+                                osuProcess = Process.GetProcessesByName("osu!")[0];
+                                fileParser.findFilePath(osuProcess.MainWindowTitle);
+                            }
                         });
                     }
-                    Thread.Sleep(100);
+                    Thread.Sleep(10);
                 }
             }).Start();
 
@@ -57,14 +79,14 @@ namespace osu_nhauto
             {
                 RelaxButton.Content = statusHandler.isRelaxRunning() ? "Enable Relax" : "Disable Relax";
                 statusHandler.toggleRelax();
-                statusHandler.updateWindow();
+                statusHandler.updateWindow(fileParser);
             }
 
             void AutoPilotButton_Click(object sender, RoutedEventArgs e)
             {
                 AutoPilotButton.Content = statusHandler.isAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
                 statusHandler.toggleAutoPilot();
-                statusHandler.updateWindow();
+                statusHandler.updateWindow(fileParser);
             }
 
             void TextBox_OnKeyPress(object sender, KeyEventArgs e)
@@ -85,7 +107,7 @@ namespace osu_nhauto
                 txtBox.Text = key.ToUpper();
                 statusHandler.setKey1(Key1TextBox.Text[0]);
                 statusHandler.setKey2(Key2TextBox.Text[0]);
-                statusHandler.updateWindow();
+                statusHandler.updateWindow(fileParser);
                 MainGrid.Focus();
             }
         }
