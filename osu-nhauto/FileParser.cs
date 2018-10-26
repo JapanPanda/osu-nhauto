@@ -14,7 +14,7 @@ namespace osu_nhauto
             Main = mw;
         }
 
-        public void getBaseFilePath(Process osuProcess)
+        public void GetBaseFilePath(Process osuProcess)
         {
             this.baseFilePath = osuProcess.MainModule.FileName;
             // Trims osu!.exe at the end
@@ -22,7 +22,7 @@ namespace osu_nhauto
             Console.WriteLine(baseFilePath);
         }
 
-        public string findFilePath(string windowTitle)
+        public string FindFilePath(string windowTitle)
         {
 
             string strippedWindowTitle = windowTitle.Substring(8);
@@ -56,7 +56,7 @@ namespace osu_nhauto
             return osuFileList[0];
         }
         
-        public string getFileName() => this.fileName;
+        public string GetFileName() => this.fileName;
 
         private string fileName;
         private string baseFilePath;

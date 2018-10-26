@@ -47,13 +47,13 @@ namespace osu_nhauto {
             }
             Main.StatusWindow.Inlines.Add("\n");
             Main.StatusWindow.Inlines.Add(new Run("Beatmap Loaded: ") { FontWeight = FontWeights.Bold });
-            if (state != GameState.PLAYING)
+            if (state != GameState.Playing)
             {
                 Main.StatusWindow.Inlines.Add(new Run("None") { Foreground = Brushes.Gray });
             }
             else
             {
-                string fileName = fileParser.getFileName();
+                string fileName = fileParser.GetFileName();
                 Console.WriteLine(fileName);
                 if (fileName == "Duplicate Folders Found")
                 {

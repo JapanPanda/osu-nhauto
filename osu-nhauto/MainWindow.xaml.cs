@@ -38,18 +38,11 @@ namespace osu_nhauto
             Key1TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
-            Key2TextBox.LostFocus += Tebool foundFilePath = false;
-
-            Process osuProcess = Process.GetProcessesByName("osu!")[0];
-            xtBox_OnLostFocus;
-
-            Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
             bool foundFilePath = false;
 
             Process osuProcess = Process.GetProcessesByName("osu!")[0];
-
             new Thread(() =>
             {
 
@@ -57,26 +50,26 @@ namespace osu_nhauto
 
                 while (true)
                 {
-                    if (!foundFilePath && pastStatus != GameState.NOT_OPEN)
+                    if (!foundFilePath && pastStatus != GameState.NotOpen)
                     {
-                        fileParser.getBaseFilePath(osuProcess);
+                        fileParser.GetBaseFilePath(osuProcess);
                         foundFilePath = true;
-                        if (pastStatus == GameState.PLAYING)
+                        if (pastStatus == GameState.Playing)
                         {
-                            fileParser.findFilePath(osuProcess.MainWindowTitle);
+                            fileParser.FindFilePath(osuProcess.MainWindowTitle);
                         }
                     }
                     if (pastStatus != statusHandler.updateGameState())
                     {
                         this.Dispatcher.Invoke(() =>
                         {
-                            statusHandler.updateWindow(fileParser);
-                            pastStatus = statusHandler.getGameState();
-                            if (pastStatus == GameState.PLAYING)
+                            pastStatus = statusHandler.GetGameState();
+                            if (pastStatus == GameState.Playing)
                             {
                                 osuProcess = Process.GetProcessesByName("osu!")[0];
-                                fileParser.findFilePath(osuProcess.MainWindowTitle);
+                                fileParser.FindFilePath(osuProcess.MainWindowTitle);
                             }
+                            statusHandler.updateWindow(fileParser);
                         });
                     }
                     Thread.Sleep(10);
@@ -92,7 +85,7 @@ namespace osu_nhauto
 
             void AutoPilotButton_Click(object sender, RoutedEventArgs e)
             {
-                AutoPilotButton.Content = statusHandler.isAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
+                AutoPilotButton.Content = statusHandler.IsAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
                 statusHandler.ToggleAutoPilot();
                 statusHandler.updateWindow(fileParser);
             }
@@ -113,8 +106,8 @@ namespace osu_nhauto
                 }
 
                 txtBox.Text = key.ToUpper();
-                statusHandler.setKey1(Key1TextBox.Text[0]);
-                statusHandler.setKey2(Key2TextBox.Text[0]);
+                statusHandler.SetKey1(Key1TextBox.Text[0]);
+                statusHandler.SetKey2(Key2TextBox.Text[0]);
                 statusHandler.updateWindow(fileParser);
                 MainGrid.Focus();
             }
