@@ -86,6 +86,7 @@ namespace osu_nhauto
                 statusHandler.setKey1(Key1TextBox.Text[0]);
                 statusHandler.setKey2(Key2TextBox.Text[0]);
                 statusHandler.updateWindow();
+                MainGrid.Focus();
             }
         }
         
