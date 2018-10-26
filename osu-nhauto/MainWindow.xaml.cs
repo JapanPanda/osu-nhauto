@@ -64,6 +64,10 @@ namespace osu_nhauto
                 {
                     if (!foundFilePath && pastStatus != GameState.NotOpen)
                     {
+                        if (osuProcess == null)
+                        {
+                            osuProcess = Process.GetProcessesByName("osu!")[0];
+                        }
                         fileParser.GetBaseFilePath(osuProcess);
                         foundFilePath = true;
                         if (pastStatus == GameState.Playing)
