@@ -96,6 +96,8 @@ namespace osu_nhauto {
         public void setGameState(GameState status) => state = status;
         public void toggleAutoPilot() => this.autopilotRunning = !this.autopilotRunning;
         public void toggleRelax() => this.relaxRunning = !this.relaxRunning;
+        public char getKey1() => this.key1;
+        public char getKey2() => this.key2;
         public void setKey1(char key) => this.key1 = key;
         public void setKey2(char key) => this.key2 = key;
         public bool isAutoPilotRunning() => this.autopilotRunning;

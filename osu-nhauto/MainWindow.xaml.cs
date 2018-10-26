@@ -36,6 +36,9 @@ namespace osu_nhauto
             Key1TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
 
+            Key1TextBox.LostFocus += TextBox_OnLostFocus;
+            Key2TextBox.LostFocus += TextBox_OnLostFocus;
+
             new Thread(() =>
             {
                 GameState pastStatus = statusHandler.updateGameState();
@@ -86,6 +89,12 @@ namespace osu_nhauto
                 statusHandler.setKey1(Key1TextBox.Text[0]);
                 statusHandler.setKey2(Key2TextBox.Text[0]);
                 statusHandler.updateWindow();
+            }
+
+            void TextBox_OnLostFocus(object sender, EventArgs e)
+            {
+                Key1TextBox.Text = statusHandler.getKey1().ToString();
+                Key2TextBox.Text = statusHandler.getKey2().ToString();
             }
         }
         
