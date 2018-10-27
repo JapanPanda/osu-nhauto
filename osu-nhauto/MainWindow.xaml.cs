@@ -60,8 +60,7 @@ namespace osu_nhauto
                                 beatmap.Parse();
                                 player.SetBeatmap(beatmap);
 
-                                if (playerUpdateThread.IsAlive)
-                                    playerUpdateThread.Start();
+                                this.Dispatcher.Invoke(new Thread(player.Update).Start);
                             }
                         }
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using osu.Helpers;
 using osu_database_reader.BinaryFiles;
+using osu_database_reader.Components.Beatmaps;
 using osu_database_reader.Components.HitObjects;
 
 namespace osu_nhauto {
@@ -54,37 +55,47 @@ namespace osu_nhauto {
 
         public void Parse()
         {
-            if (hitObjects != null)
+            if (timingPoints != null && hitObjects != null)
                 return;
 
             if (filePath == null)
                 filePath = Get();
 
+            List<TimingPoint> timingPtsTemp = new List<TimingPoint>();
             List<HitObject> hitObjsTemp = new List<HitObject>();
             using (var sr = new StreamReader(File.OpenRead(filePath)))
             {
                 string line;
-                bool startParsingObjects = false;
+                int startParsing = 0;
                 while ((line = sr.ReadLine()) != null)
                 {
-                    if (startParsingObjects)
-                    {
-                        HitObject hitObj = HitObject.FromString(line);
-                        hitObjsTemp.Add(hitObj);
-                        //Console.WriteLine("Type: {0} | X: {1}, Y: {2} | ms: {3}", hitObj.Type.ToString(), hitObj.X, hitObj.Y, hitObj.Time);
-                    }
+                    if (line.StartsWith("[") || line.Length == 0)
+                        startParsing = 0;
+
+                    if (line.StartsWith("SliderMultiplier:"))
+                        SliderVelocity = double.Parse(line.Split(':')[1]);
+                    else if (line.Equals("[TimingPoints]"))
+                        startParsing = 1;
                     else if (line.Equals("[HitObjects]"))
-                        startParsingObjects = true;
+                        startParsing = 2;
+                    else if (startParsing == 1)
+                        timingPtsTemp.Add(TimingPoint.FromString(line));
+                    else if (startParsing == 2)
+                        hitObjsTemp.Add(HitObject.FromString(line));
                 }
             }
 
+            timingPoints = timingPtsTemp.AsReadOnly();
             hitObjects = hitObjsTemp.AsReadOnly();
         }
 
+        public ReadOnlyCollection<TimingPoint> GetTimingPoints() => timingPoints;
         public ReadOnlyCollection<HitObject> GetHitObjects() => hitObjects;
+        public double SliderVelocity = 1.0;
 
         private InterProcessOsu ipc;
         private string filePath = null;
+        private ReadOnlyCollection<TimingPoint> timingPoints = null;
         private ReadOnlyCollection<HitObject> hitObjects = null;
     }
 }
