@@ -17,7 +17,7 @@ namespace osu_nhauto
         public string GetBaseFilePath()
         {
             if (this.baseFilePath == null)
-                this.baseFilePath = MainWindow.osu.getOsuProcess().MainModule.FileName.Substring(0, MainWindow.osu.getOsuProcess().MainModule.FileName.Length - 8);
+                this.baseFilePath = MainWindow.osu.GetProcess().MainModule.FileName.Substring(0, MainWindow.osu.GetProcess().MainModule.FileName.Length - 8);
 
             Console.WriteLine(baseFilePath);
             return this.baseFilePath;
@@ -28,7 +28,7 @@ namespace osu_nhauto
             if (this.baseFilePath == null)
                 GetBaseFilePath();
 
-            string windowTitle = MainWindow.osu.getOsuProcess().MainWindowTitle;
+            string windowTitle = MainWindow.osu.GetProcess().MainWindowTitle;
             string strippedWindowTitle = windowTitle.Substring(8);
             string difficultyStrippedTitle = string.Empty;
             string difficulty = string.Empty;

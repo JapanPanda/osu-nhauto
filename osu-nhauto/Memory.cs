@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -68,35 +64,24 @@ namespace osu_nhauto
             return BitConverter.ToBoolean(buffer, 0);
         }
 
-        private int FindPattern(byte[] source, byte[] pattern, string Mask)
+        private int FindPattern(byte[] source, byte[] pattern, string mask)
         {
             bool found = false;
-
             for (int i = 0; i < source.Length - pattern.Length; i++)
             {
                 found = true;
-
                 for (int j = 0; j < pattern.Length; j++)
                 {
-                    if (Mask[j] == 'x')
+                    if (mask[j] == '?')
+                        continue;
+                    else if (mask[j] == 'x')
                     {
                         if (source[i + j] != pattern[j])
                         {
                             found = false;
                             break;
                         }
-                        if (j == pattern.Length - 1)
-                        {
-                            found = true;
-                            break;
-                        }
                     }
-                    else if (Mask[j] == '?' && j == pattern.Length - 1)
-                    {
-                        found = true;
-                        break;
-                    }
-                    
                 }
 
                 if (found)

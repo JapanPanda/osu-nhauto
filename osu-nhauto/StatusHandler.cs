@@ -112,11 +112,11 @@ namespace osu_nhauto {
 
         public GameState UpdateGameState()
         {
-            if (MainWindow.osu.getOsuProcess() == null)
+            if (MainWindow.osu.GetProcess() == null)
             {
                 state = GameState.NotOpen;
             }
-            else if (MainWindow.osu.getWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1)
+            else if (MainWindow.osu.GetWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1)
             {
                 state = GameState.Playing;
             }

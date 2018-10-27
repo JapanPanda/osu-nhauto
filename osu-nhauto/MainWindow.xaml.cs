@@ -1,21 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace osu_nhauto
 {
@@ -27,7 +16,7 @@ namespace osu_nhauto
         public static StatusHandler statusHandler;
         public static FileParser fileParser;
         public static string currentBeatmapPath = null;
-        public static Osu osu;
+        public static Osu osu = null;
 
         public MainWindow()
         {
@@ -54,15 +43,15 @@ namespace osu_nhauto
             new Thread(() =>
             {
                 GameState pastStatus = statusHandler.GetGameState();
-
-                int currentTime = osu.GetAudioTime();
+                int lastTime = osu.GetAudioTime();
                 while (true)
                 {
-                    if (statusHandler.GetGameState() == GameState.Playing && currentTime != osu.GetAudioTime())
+                    osu.UpdateWindowStatus();
+                    int currentTime = osu.GetAudioTime();
+                    if (lastTime != currentTime)
                     {
-                        currentTime = osu.GetAudioTime();
-                        Console.WriteLine("Time: " + currentTime);
-
+                        Console.WriteLine(currentTime);
+                        lastTime = currentTime;
                     }
                     if (pastStatus != statusHandler.UpdateGameState())
                     {
@@ -71,12 +60,12 @@ namespace osu_nhauto
                             CurrentBeatmap beatmap = new CurrentBeatmap();
                             currentBeatmapPath = beatmap.Get();
                             beatmap.Parse(); // TODO you know what to do boys
-                        }                          
+                        }
 
                         pastStatus = statusHandler.GetGameState();
                         this.Dispatcher.Invoke(statusHandler.UpdateWindow);
                     }
-                    Thread.Sleep(100);
+                    Thread.Sleep(1);
                 }
             }).Start();
 
