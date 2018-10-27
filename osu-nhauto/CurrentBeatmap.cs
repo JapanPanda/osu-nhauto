@@ -71,7 +71,7 @@ namespace osu_nhauto {
                     {
                         HitObject hitObj = HitObject.FromString(line);
                         hitObjsTemp.Add(hitObj);
-                        Console.WriteLine("Type: {0} | X: {1}, Y: {2} | ms: {3}", hitObj.Type.ToString(), hitObj.X, hitObj.Y, hitObj.Time);
+                        //Console.WriteLine("Type: {0} | X: {1}, Y: {2} | ms: {3}", hitObj.Type.ToString(), hitObj.X, hitObj.Y, hitObj.Time);
                     }
                     else if (line.Equals("[HitObjects]"))
                         startParsingObjects = true;

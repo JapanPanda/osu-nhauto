@@ -105,6 +105,7 @@
     <Compile Include="CurrentBeatmap.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="Osu.cs" />
+    <Compile Include="Player.cs" />
     <Compile Include="StatusHandler.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

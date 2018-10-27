@@ -26,9 +26,11 @@ namespace osu_nhauto
 
         public void InitializeEvents()
         {
+            osu = new Osu();
+            player = new Player(osu);
+
             statusHandler = new StatusHandler(this);
             fileParser = new FileParser(this);
-            osu = new Osu();
 
             statusHandler.UpdateWindow();
             RelaxButton.Click += RelaxButton_Click;
@@ -38,7 +40,6 @@ namespace osu_nhauto
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
-
 
             new Thread(() =>
             {
@@ -71,15 +72,15 @@ namespace osu_nhauto
 
             void RelaxButton_Click(object sender, RoutedEventArgs e)
             {
-                RelaxButton.Content = statusHandler.IsRelaxRunning() ? "Enable Relax" : "Disable Relax";
-                statusHandler.ToggleRelax();
+                RelaxButton.Content = player.IsRelaxRunning() ? "Enable Relax" : "Disable Relax";
+                player.ToggleRelax();
                 statusHandler.UpdateWindow();
             }
 
             void AutoPilotButton_Click(object sender, RoutedEventArgs e)
             {
-                AutoPilotButton.Content = statusHandler.IsAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
-                statusHandler.ToggleAutoPilot();
+                AutoPilotButton.Content = player.IsAutoPilotRunning() ? "Enable AutoPilot" : "Disable AutoPilot";
+                player.ToggleAutoPilot();
                 statusHandler.UpdateWindow();
             }
 
@@ -99,16 +100,16 @@ namespace osu_nhauto
                 }
 
                 txtBox.Text = key.ToUpper();
-                statusHandler.SetKey1(Key1TextBox.Text[0]);
-                statusHandler.SetKey2(Key2TextBox.Text[0]);
+                player.SetKey1(Key1TextBox.Text[0]);
+                player.SetKey2(Key2TextBox.Text[0]);
                 statusHandler.UpdateWindow();
                 MainGrid.Focus();
             }
 
             void TextBox_OnLostFocus(object sender, EventArgs e)
             {
-                Key1TextBox.Text = statusHandler.GetKey1().ToString();
-                Key2TextBox.Text = statusHandler.GetKey2().ToString();
+                Key1TextBox.Text = player.GetKey1().ToString();
+                Key2TextBox.Text = player.GetKey2().ToString();
             }
         }
         
@@ -129,6 +130,9 @@ namespace osu_nhauto
             App.Current.Shutdown();
             Process.GetCurrentProcess().Kill();
         }
+
+        public Player GetPlayer() => this.player;
+        private Player player;
     }
 
 }

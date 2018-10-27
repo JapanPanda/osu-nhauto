@@ -18,10 +18,6 @@ namespace osu_nhauto {
         public StatusHandler(MainWindow mw)
         {
             Main = mw;
-            autopilotRunning = false;
-            relaxRunning = false;
-            key1 = 'Z';
-            key2 = 'X';
         }
 
         public void UpdateWindow()
@@ -53,15 +49,10 @@ namespace osu_nhauto {
             {
                 string fileName = MainWindow.currentBeatmapPath;
                 Console.WriteLine(fileName);
-                int i;
-                for (i = fileName.Length - 1; i >= 7; i--)
-                {
-                    if (fileName[i] == '\\')
-                    {
+                int i = fileName.Length - 1;
+                while (i >= 7)
+                    if (fileName[i--] == '\\')
                         break;
-                    }
-
-                }
                 fileName = fileName.Substring(i + 1);
                 Console.WriteLine(fileName);
                 if (fileName == "Duplicate Folders Found")
@@ -81,9 +72,10 @@ namespace osu_nhauto {
                     Main.StatusWindow.Inlines.Add(new Run("Retry the map to initialize") { Foreground = Brushes.Green });
                 }
             }
+            Player player = Main.GetPlayer();
             Main.StatusWindow.Inlines.Add("\n");
             Main.StatusWindow.Inlines.Add(new Run("AutoPilot: ") { FontWeight = FontWeights.Bold });
-            if (autopilotRunning)
+            if (player.IsAutoPilotRunning())
             {
                 Main.StatusWindow.Inlines.Add(new Run("Running") { Foreground = Brushes.Green });
             }
@@ -93,7 +85,7 @@ namespace osu_nhauto {
             }
             Main.StatusWindow.Inlines.Add("\n");
             Main.StatusWindow.Inlines.Add(new Run("Relax: ") { FontWeight = FontWeights.Bold });
-            if (relaxRunning)
+            if (player.IsRelaxRunning())
             {
                 Main.StatusWindow.Inlines.Add(new Run("Running") { Foreground = Brushes.Green });
             }
@@ -103,10 +95,10 @@ namespace osu_nhauto {
             }
             Main.StatusWindow.Inlines.Add("\n");
             Main.StatusWindow.Inlines.Add(new Run("Key 1: ") { FontWeight = FontWeights.Bold });
-            Main.StatusWindow.Inlines.Add(this.key1.ToString());
+            Main.StatusWindow.Inlines.Add(player.GetKey1().ToString());
             Main.StatusWindow.Inlines.Add(" ");
             Main.StatusWindow.Inlines.Add(new Run("Key 2: ") { FontWeight = FontWeights.Bold });
-            Main.StatusWindow.Inlines.Add(this.key2.ToString());
+            Main.StatusWindow.Inlines.Add(player.GetKey2().ToString());
 
         }
 
@@ -128,19 +120,6 @@ namespace osu_nhauto {
         }
 
         public GameState GetGameState() => state;
-        public void ToggleAutoPilot() => this.autopilotRunning = !this.autopilotRunning;
-        public void ToggleRelax() => this.relaxRunning = !this.relaxRunning;
-        public char GetKey1() => this.key1;
-        public char GetKey2() => this.key2;
-        public void SetKey1(char key) => this.key1 = key;
-        public void SetKey2(char key) => this.key2 = key;
-        public bool IsAutoPilotRunning() => this.autopilotRunning;
-        public bool IsRelaxRunning() => this.relaxRunning;
-
-        private char key1;
-        private char key2;
-        private bool autopilotRunning;
-        private bool relaxRunning;
         private GameState state = GameState.NotOpen;
     }
 }
