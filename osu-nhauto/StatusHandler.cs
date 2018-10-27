@@ -52,6 +52,18 @@ namespace osu_nhauto {
             else
             {
                 string fileName = MainWindow.currentBeatmapPath;
+                Console.WriteLine(fileName);
+                int i;
+                for (i = fileName.Length - 1; i >= 7; i--)
+                {
+                    if (fileName[i] == '\\')
+                    {
+                        break;
+                    }
+
+                }
+                fileName = fileName.Substring(i + 1);
+                Console.WriteLine(fileName);
                 if (fileName == "Duplicate Folders Found")
                 {
                     Main.StatusWindow.Inlines.Add(new Run("Duplicate Song Folders Found") { Foreground = Brushes.Red });
@@ -100,11 +112,11 @@ namespace osu_nhauto {
 
         public GameState UpdateGameState()
         {
-            if (MainWindow.osuProcess == null)
+            if (MainWindow.osu.getOsuProcess() == null)
             {
                 state = GameState.NotOpen;
             }
-            else if (MainWindow.osuProcess.MainWindowTitle.IndexOf("-", StringComparison.InvariantCulture) > -1)
+            else if (MainWindow.osu.getWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1)
             {
                 state = GameState.Playing;
             }

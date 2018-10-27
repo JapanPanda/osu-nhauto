@@ -26,8 +26,8 @@ namespace osu_nhauto
     {
         public static StatusHandler statusHandler;
         public static FileParser fileParser;
-        public static Process osuProcess = null;
         public static string currentBeatmapPath = null;
+        public static Osu osu;
 
         public MainWindow()
         {
@@ -39,6 +39,8 @@ namespace osu_nhauto
         {
             statusHandler = new StatusHandler(this);
             fileParser = new FileParser(this);
+            osu = new Osu();
+
             statusHandler.UpdateWindow();
             RelaxButton.Click += RelaxButton_Click;
             AutoPilotButton.Click += AutoPilotButton_Click;
@@ -48,14 +50,20 @@ namespace osu_nhauto
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
+
             new Thread(() =>
             {
                 GameState pastStatus = statusHandler.GetGameState();
 
+                int currentTime = osu.GetAudioTime();
                 while (true)
                 {
-                    Process[] processes = Process.GetProcessesByName("osu!");
-                    osuProcess = processes.Length > 0 ? processes[0] : null;
+                    if (statusHandler.GetGameState() == GameState.Playing && currentTime != osu.GetAudioTime())
+                    {
+                        currentTime = osu.GetAudioTime();
+                        Console.WriteLine("Time: " + currentTime);
+
+                    }
                     if (pastStatus != statusHandler.UpdateGameState())
                     {
                         if (statusHandler.GetGameState() == GameState.Playing)
@@ -133,4 +141,5 @@ namespace osu_nhauto
             Process.GetCurrentProcess().Kill();
         }
     }
+
 }
