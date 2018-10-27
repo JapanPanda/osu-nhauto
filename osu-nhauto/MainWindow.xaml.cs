@@ -18,6 +18,8 @@ namespace osu_nhauto
         public static string currentBeatmapPath = null;
         public static Osu osu = null;
 
+        public static readonly object lockObject = new object();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -41,32 +43,32 @@ namespace osu_nhauto
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
+            Thread playerUpdateThread = new Thread(player.Update);
             new Thread(() =>
             {
                 GameState pastStatus = statusHandler.GetGameState();
-                int lastTime = osu.GetAudioTime();
                 while (true)
                 {
-                    osu.UpdateWindowStatus();
-                    int currentTime = osu.GetAudioTime();
-                    if (lastTime != currentTime)
-                    {
-                        Console.WriteLine(currentTime);
-                        lastTime = currentTime;
-                    }
                     if (pastStatus != statusHandler.UpdateGameState())
                     {
                         if (statusHandler.GetGameState() == GameState.Playing)
                         {
                             CurrentBeatmap beatmap = new CurrentBeatmap();
                             currentBeatmapPath = beatmap.Get();
-                            beatmap.Parse(); // TODO you know what to do boys
+                            if (currentBeatmapPath != null)
+                            {
+                                beatmap.Parse();
+                                player.SetBeatmap(beatmap);
+
+                                if (playerUpdateThread.IsAlive)
+                                    playerUpdateThread.Start();
+                            }
                         }
 
                         pastStatus = statusHandler.GetGameState();
                         this.Dispatcher.Invoke(statusHandler.UpdateWindow);
                     }
-                    Thread.Sleep(1);
+                    Thread.Sleep(1000);
                 }
             }).Start();
 
@@ -112,7 +114,7 @@ namespace osu_nhauto
                 Key2TextBox.Text = player.GetKey2().ToString();
             }
         }
-        
+
         private void InputBox_GotFocus(object sender, RoutedEventArgs e)
         {
             ((TextBox)sender).Text = string.Empty;
@@ -134,5 +136,4 @@ namespace osu_nhauto
         public Player GetPlayer() => this.player;
         private Player player;
     }
-
 }

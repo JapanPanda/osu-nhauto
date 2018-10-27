@@ -52,10 +52,10 @@ namespace osu_nhauto {
             return filePath;
         }
 
-        public ReadOnlyCollection<HitObject> Parse()
+        public void Parse()
         {
             if (hitObjects != null)
-                return hitObjects;
+                return;
 
             if (filePath == null)
                 filePath = Get();
@@ -79,8 +79,9 @@ namespace osu_nhauto {
             }
 
             hitObjects = hitObjsTemp.AsReadOnly();
-            return hitObjects;
         }
+
+        public ReadOnlyCollection<HitObject> GetHitObjects() => hitObjects;
 
         private InterProcessOsu ipc;
         private string filePath = null;
