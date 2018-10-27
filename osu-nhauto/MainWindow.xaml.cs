@@ -43,6 +43,7 @@ namespace osu_nhauto
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
+            
             Thread playerUpdateThread = new Thread(player.Update);
             new Thread(() =>
             {

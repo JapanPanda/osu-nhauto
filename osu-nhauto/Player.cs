@@ -6,21 +6,26 @@ using WindowsInput;
 using osu.Shared;
 using osu_database_reader.Components.Beatmaps;
 using osu_database_reader.Components.HitObjects;
+using System.Runtime.InteropServices;
 
 namespace osu_nhauto {
 
     public class Player
     {
-	    public Player(Osu osu)
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern short VkKeyScanEx(char ch, IntPtr dwhkl);
+
+        public Player(Osu osu)
 	    {
             osuClient = osu;
         }
 
         public void testKeyPress()
         {
-            inputSimulator.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.VK_Q);
+
+            inputSimulator.Keyboard.KeyDown(this.keyCode1);
             Thread.Sleep(100);
-            inputSimulator.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_Q);
+            inputSimulator.Keyboard.KeyUp(this.keyCode1);
         }
 
         public void Update()
@@ -41,7 +46,7 @@ namespace osu_nhauto {
                     {
                         //inputSimulator.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.VK_Q);
                         //inputSimulator.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_Q);
-                        inputSimulator.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.VK_Q);
+                        inputSimulator.Keyboard.KeyDown(this.keyCode1);
                         int delay = 10;
                         
                         switch (currHitObject.Type & (HitObjectType)0b1000_1011)
@@ -62,7 +67,7 @@ namespace osu_nhauto {
                         
                         Console.WriteLine("Current: {0}, Object: {1}", currentTime, currHitObject.Time);
                         Thread.Sleep(delay);
-                        inputSimulator.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_Q);
+                        inputSimulator.Keyboard.KeyUp(this.keyCode1);
 
                         currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
 
@@ -101,16 +106,16 @@ namespace osu_nhauto {
 
         private int calculateSliderDuration(HitObjectSlider obj, TimingPoint tp)
         {
-            Console.WriteLine(realMsPerQuarter);
-            Console.WriteLine(tp.MsPerQuarter);
-            Console.WriteLine(tp.Time);
-            Console.WriteLine(beatmap.SliderVelocity);
+            //Console.WriteLine(realMsPerQuarter);
+            //Console.WriteLine(tp.MsPerQuarter);
+            //Console.WriteLine(tp.Time);
+            //Console.WriteLine(beatmap.SliderVelocity);
 
             double speedVelocity = 1;
             if (tp.MsPerQuarter < 0)
                 speedVelocity = -100 / tp.MsPerQuarter;
 
-            Console.WriteLine(speedVelocity);
+            //Console.WriteLine(speedVelocity);
 
             double overallVelocity = 100 * beatmap.SliderVelocity * speedVelocity / realMsPerQuarter;
             return (int)Math.Ceiling(obj.Length * obj.RepeatCount / overallVelocity);
@@ -141,12 +146,31 @@ namespace osu_nhauto {
         public void ToggleRelax() => relaxRunning = !relaxRunning;
         public char GetKey1() => key1;
         public char GetKey2() => key2;
-        public void SetKey1(char key) => key1 = key;
-        public void SetKey2(char key) => key2 = key;
+        public void SetKey1(char key) {
+            WindowsInput.Native.VirtualKeyCode key1;
+            if (Enum.TryParse<WindowsInput.Native.VirtualKeyCode>("VK_" + key, out key1))
+            {
+                this.keyCode1 = key1;
+                this.key1 = key;
+
+            }
+        }
+        public void SetKey2(char key)
+        {
+            WindowsInput.Native.VirtualKeyCode key2;
+            if (Enum.TryParse<WindowsInput.Native.VirtualKeyCode>("VK_" + key, out key2))
+            {
+                this.keyCode2 = key2;
+                this.key2 = key;
+            }
+        }
+        
         public bool IsAutoPilotRunning() => autopilotRunning;
         public bool IsRelaxRunning() => relaxRunning;
         public void SetBeatmap(CurrentBeatmap cb) => beatmap = cb;
 
+        private WindowsInput.Native.VirtualKeyCode keyCode1;
+        private WindowsInput.Native.VirtualKeyCode keyCode2;
         private char key1 = 'Z';
         private char key2 = 'X';
         private bool autopilotRunning = false;
