@@ -39,16 +39,17 @@ namespace osu_nhauto
             catch (System.Exception e)
             {
                 System.Console.WriteLine("Trying to load memory when osu! isn't fully loaded yet");
-                loadedAddresses = false;
+                System.Console.WriteLine(e.Message);
+                //loadedAddresses = false;
+                loadedAddresses = true;
             }
         }
 
         public string GetWindowTitle()
         {
-            if (osuProcess == null)
-            {
-                return null;
-            }
+            if (osuProcess == null || osuProcess.HasExited)
+                return "";
+
             osuProcess.Refresh();
             return osuProcess.MainWindowTitle;
         }
