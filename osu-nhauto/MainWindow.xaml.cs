@@ -72,7 +72,7 @@ namespace osu_nhauto
                     {
                         if (statusHandler.UpdateGameState() != GameState.Loading) {
                             pastStatus = statusHandler.GetGameState();
-                            statusHandler.UpdateWindow();
+                            this.Dispatcher.Invoke(statusHandler.UpdateWindow);
                         }
                     }
 
