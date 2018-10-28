@@ -16,13 +16,6 @@ namespace osu_nhauto {
             osuClient = osu;
         }
 
-        public void testKeyPress()
-        {
-            inputSimulator.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.VK_Q);
-            Thread.Sleep(100);
-            inputSimulator.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_Q);
-        }
-
         public void Update()
         {
             int lastTime = osuClient.GetAudioTime();
@@ -36,11 +29,15 @@ namespace osu_nhauto {
                 int currentTime = osuClient.GetAudioTime();
                 if (currentTime > lastTime)
                 {
-                    //TimingPoint currTimingPt = nextTimingPtIndex < beatmap.GetTimingPoints().Count ? beatmap.GetTimingPoints()[nextTimingPtIndex] : null; ;
+                    if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
+                    {
+                        UpdateTimingSettings();
+                        ++nextTimingPtIndex;
+                        nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
+                        Console.WriteLine("Current time at {0}\n", currentTime);
+                    }
                     if (currHitObject != null && currentTime >= currHitObject.Time)
                     {
-                        //inputSimulator.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.VK_Q);
-                        //inputSimulator.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_Q);
                         inputSimulator.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.VK_Q);
                         int delay = 10;
                         
@@ -48,9 +45,8 @@ namespace osu_nhauto {
                         {
                             case HitObjectType.Slider:
                                 HitObjectSlider slider = currHitObject as HitObjectSlider;
-                                int calc = calculateSliderDuration(slider, nextTimingPt);
-                                Console.Write("Slider Calc: {0}, ", calc);
-                                delay += calc - 10;
+                                int calc = calculateSliderDuration(slider);
+                                delay += calc + 25;
                                 break;
                             case HitObjectType.Spinner:
                                 HitObjectSpinner spinner = currHitObject as HitObjectSpinner;
@@ -60,79 +56,53 @@ namespace osu_nhauto {
                                 break;
                         }
                         
-                        Console.WriteLine("Current: {0}, Object: {1}", currentTime, currHitObject.Time);
                         Thread.Sleep(delay);
                         inputSimulator.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_Q);
 
                         currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-
-                        /*
-                        Console.WriteLine("Type: {0} | X: {1}, Y: {2} | ms: {3}", currHitObject.Type.ToString(), currHitObject.X, currHitObject.Y, currHitObject.Time);
-                        switch (currHitObject.Type & (HitObjectType)0b1000_1011)
-                        {
-                            case HitObjectType.Slider:
-                                HitObjectSlider slider = currHitObject as HitObjectSlider;
-                                Console.WriteLine("Repeat: {0} | Length: {1}", slider.RepeatCount, slider.Length);
-                                break;
-                            default:
-                                break;
-                        }
-                        */
-
-                        //currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                    }
-                    if (nextTimingPt != null && currentTime > nextTimingPt.Time)
-                    {
-                        ++nextTimingPtIndex;
-                        nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
                     }
                     lastTime = currentTime;
                 }
                 else if (currentTime < lastTime)
                 {
-                    // map restarted
-                    nextTimingPtIndex = 0;
-                    nextHitObjIndex = 0;
-                    lastTime = currentTime;
+                    Update();
+                    break;
                 }
                 Thread.Sleep(1);
             }
         }
 
-        private int calculateSliderDuration(HitObjectSlider obj, TimingPoint tp)
-        {
-            Console.WriteLine(realMsPerQuarter);
-            Console.WriteLine(tp.MsPerQuarter);
-            Console.WriteLine(tp.Time);
-            Console.WriteLine(beatmap.SliderVelocity);
-
-            double speedVelocity = 1;
-            if (tp.MsPerQuarter < 0)
-                speedVelocity = -100 / tp.MsPerQuarter;
-
-            Console.WriteLine(speedVelocity);
-
-            double overallVelocity = 100 * beatmap.SliderVelocity * speedVelocity / realMsPerQuarter;
-            return (int)Math.Ceiling(obj.Length * obj.RepeatCount / overallVelocity);
-        }
+        private int calculateSliderDuration(HitObjectSlider obj) =>
+            (int)Math.Ceiling(obj.Length * obj.RepeatCount / (100 * beatmap.SliderVelocity * speedVelocity / msPerQuarter));
 
         private TimingPoint GetNextTimingPoint(ref int index)
         {
-            TimingPoint tp = beatmap.GetTimingPoints()[index];
-            if (tp.MsPerQuarter > 0)
-                realMsPerQuarter = tp.MsPerQuarter;
-            for (; index < beatmap.GetTimingPoints().Count - 1; ++index)
+            if (index >= beatmap.GetTimingPoints().Count)
+                return null;
+
+            for (; index < beatmap.GetTimingPoints().Count; ++index)
             {
-                Console.Write("{0} ", index);
-                if (beatmap.GetTimingPoints()[index + 1].Time > beatmap.GetTimingPoints()[index].Time)
-                    return beatmap.GetTimingPoints()[index];
+                TimingPoint next = beatmap.GetTimingPoints()[index];
+                TimingPoint after = index + 1 >= beatmap.GetTimingPoints().Count ?  null : beatmap.GetTimingPoints()[index + 1];
+
+                if (next.MsPerQuarter > 0)
+                    nextTimings[0] = next.MsPerQuarter;
+                else if (next.MsPerQuarter < 0)
+                    nextTimings[1] = -100 / next.MsPerQuarter;
+
+                if (after == null || after.Time > next.Time)
+                {
+                    Console.WriteLine("Next timing point at {0}", next.Time);
+                    return next;
+                }
             }
-            return tp;
+            return null;
         }
 
-        private TimingPoint GetPreviousTimingPoint(TimingPoint tp)
+        private void UpdateTimingSettings()
         {
-            return beatmap.GetTimingPoints()[beatmap.GetTimingPoints().IndexOf(tp) - 1];
+            msPerQuarter = nextTimings[0];
+            speedVelocity = nextTimings[1];
         }
 
         private Osu osuClient;
@@ -151,7 +121,9 @@ namespace osu_nhauto {
         private char key2 = 'X';
         private bool autopilotRunning = false;
         private bool relaxRunning = false;
-        private double realMsPerQuarter = 1000.0;
+        private double msPerQuarter = 1000;
+        private double speedVelocity = 1;
+        private double[] nextTimings = new double[2];
         private InputSimulator inputSimulator = new InputSimulator();
         private CurrentBeatmap beatmap;
     }
