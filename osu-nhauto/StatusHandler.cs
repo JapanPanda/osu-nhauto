@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace osu_nhauto {
 
     public enum GameState
     {
-        Playing, Idle, NotOpen
+        Playing, Idle, NotOpen, Loading
     }
 
     public class StatusHandler
@@ -34,6 +36,9 @@ namespace osu_nhauto {
                     break;
                 case GameState.Playing:
                     Main.StatusWindow.Inlines.Add(new Run("Playing") { Foreground = Brushes.Green });
+                    break;
+                case GameState.Loading:
+                    Main.StatusWindow.Inlines.Add(new Run("Loading") { Foreground = Brushes.Green });
                     break;
                 default:
                     Main.StatusWindow.Inlines.Add(new Run("UNKNOWN ? ? ?") { Foreground = Brushes.DarkRed });
@@ -106,7 +111,13 @@ namespace osu_nhauto {
         {
             if (MainWindow.osu.GetProcess() == null)
             {
-                state = GameState.NotOpen;
+                MainWindow.osu.ObtainProcess();
+                state = MainWindow.osu.GetProcess() != null ? GameState.Loading : GameState.NotOpen;
+            }
+            else if (state == GameState.Loading)
+            {
+                MainWindow.osu.ObtainAddresses();
+                state = MainWindow.osu.IsAddressesLoaded() == false ? GameState.Loading : GameState.Idle;
             }
             else if (MainWindow.osu.GetWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1)
             {

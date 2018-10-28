@@ -43,6 +43,7 @@ namespace osu_nhauto
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
+            
             Thread playerUpdateThread = new Thread(player.Update);
             new Thread(() =>
             {
@@ -67,6 +68,14 @@ namespace osu_nhauto
                         pastStatus = statusHandler.GetGameState();
                         this.Dispatcher.Invoke(statusHandler.UpdateWindow);
                     }
+                    if (pastStatus == GameState.Loading)
+                    {
+                        if (statusHandler.UpdateGameState() != GameState.Loading) {
+                            pastStatus = statusHandler.GetGameState();
+                            statusHandler.UpdateWindow();
+                        }
+                    }
+
                     Thread.Sleep(1000);
                 }
             }).Start();
