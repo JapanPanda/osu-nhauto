@@ -10,7 +10,7 @@ namespace osu_nhauto {
 
     public enum GameState
     {
-        Playing, Idle, NotOpen, Loading
+        NotOpen, Loading, Idle, Playing
     }
 
     public class StatusHandler
