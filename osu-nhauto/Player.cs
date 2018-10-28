@@ -30,10 +30,15 @@ namespace osu_nhauto {
 
         public void Update()
         {
+            if (osuClient.GetWindowTitle() == null)
+            {
+                return;
+            }
             int lastTime = osuClient.GetAudioTime();
+            Mods timeMod = osuClient.GetTimeMod();
             int nextTimingPtIndex = 0;
             int nextHitObjIndex = 0;
-
+            Console.WriteLine(timeMod);
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)

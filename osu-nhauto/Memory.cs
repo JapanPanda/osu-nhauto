@@ -52,6 +52,12 @@ namespace osu_nhauto
             return buffer;
         }
 
+        public Single ReadSingle(int address)
+        {
+            byte[] buffer = ReadBytes(address, sizeof(Single));
+            return BitConverter.ToSingle(buffer, 0);
+        }
+
         public Int32 ReadInt32(int address)
         {
             byte[] buffer = ReadBytes(address, sizeof(Int32));

@@ -29,6 +29,10 @@ namespace osu_nhauto
                 GetBaseFilePath();
 
             string windowTitle = MainWindow.osu.GetProcess().MainWindowTitle;
+            if (windowTitle.Length < 8)
+            {
+                throw new System.Exception("Title not long enough");
+            }
             string strippedWindowTitle = windowTitle.Substring(8);
             string difficultyStrippedTitle = string.Empty;
             string difficulty = string.Empty;
