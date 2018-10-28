@@ -109,10 +109,10 @@ namespace osu_nhauto {
 
         public GameState UpdateGameState()
         {
-            if (MainWindow.osu.GetProcess() == null)
+            if (!MainWindow.osu.IsOpen())
             {
                 MainWindow.osu.ObtainProcess();
-                state = MainWindow.osu.GetProcess() != null ? GameState.Loading : GameState.NotOpen;
+                state = MainWindow.osu.IsOpen() ? GameState.Loading : GameState.NotOpen;
             }
             else if (state == GameState.Loading)
             {

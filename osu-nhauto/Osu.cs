@@ -30,10 +30,11 @@ namespace osu_nhauto
                 audioTime = memory.ReadInt32(addressPtr + 0x1);
                 audioPlaying = audioTime + 0x24;
                 //34 C2 2F 05 50 9B 34 07 90 09 2D 07 50 9B 34 07 00 00 80 3F
+                /*
                 addressPtr = memory.FindSignature(new byte[] { 0x34, 0xC2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3F },
                 0x1000, 0x10000000, "xx??????????????xxxx");
 
-                timeMod = memory.ReadInt32(addressPtr + 0x4) + 0x10;
+                timeMod = memory.ReadInt32(addressPtr + 0x4) + 0x10; */
                 loadedAddresses = true;
             }
             catch (System.Exception e)
@@ -47,7 +48,7 @@ namespace osu_nhauto
 
         public string GetWindowTitle()
         {
-            if (osuProcess == null || osuProcess.HasExited)
+            if (!IsOpen())
                 return "";
 
             osuProcess.Refresh();
@@ -56,7 +57,7 @@ namespace osu_nhauto
 
         public void UpdateWindowStatus()
         {
-            if (osuProcess == null || osuProcess.HasExited)
+            if (!IsOpen())
                 ObtainProcess();
         }
 
@@ -78,6 +79,7 @@ namespace osu_nhauto
 
         public int GetAudioTime() => memory.ReadInt32(audioTime);
         public bool IsAddressesLoaded() => loadedAddresses;
+        public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
         public Process GetProcess() => this.osuProcess;
         private Process osuProcess;
         private Memory memory;
