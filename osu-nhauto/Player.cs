@@ -22,17 +22,14 @@ namespace osu_nhauto {
 
         public void Update()
         {
-            if (osuClient.GetWindowTitle() == null)
-            {
-                return;
-            }
-            int lastTime = osuClient.GetAudioTime();
-            Mods timeMod = osuClient.GetTimeMod();
-            int nextTimingPtIndex = 0;
-            int nextHitObjIndex = 0;
-            Console.WriteLine(timeMod);
+            //Mods timeMod = osuClient.GetTimeMod();
+            int nextTimingPtIndex = 0, nextHitObjIndex = 0;
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
+            msPerQuarter = currHitObject.Time;
+
+            bool shouldPressSecondary = false;
+            int lastTime = osuClient.GetAudioTime();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime();
@@ -43,19 +40,17 @@ namespace osu_nhauto {
                         UpdateTimingSettings();
                         ++nextTimingPtIndex;
                         nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
-                        Console.WriteLine("Current time at {0}\n", currentTime);
                     }
                     if (currHitObject != null && currentTime >= currHitObject.Time)
                     {
-                        inputSimulator.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.VK_Q);
-                        int delay = 10;
-                        
+                        shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
+                        inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
+                        int delay = 10;                       
                         switch (currHitObject.Type & (HitObjectType)0b1000_1011)
                         {
                             case HitObjectType.Slider:
                                 HitObjectSlider slider = currHitObject as HitObjectSlider;
-                                int calc = calculateSliderDuration(slider);
-                                delay += calc + 25;
+                                delay += CalculateSliderDuration(slider);
                                 break;
                             case HitObjectType.Spinner:
                                 HitObjectSpinner spinner = currHitObject as HitObjectSpinner;
@@ -64,10 +59,8 @@ namespace osu_nhauto {
                             default:
                                 break;
                         }
-                        
                         Thread.Sleep(delay);
-                        inputSimulator.Keyboard.KeyUp(this.keyCode1);
-
+                        inputSimulator.Keyboard.KeyUp(shouldPressSecondary ? keyCode2 : keyCode1);
                         currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
                     }
                     lastTime = currentTime;
@@ -81,8 +74,8 @@ namespace osu_nhauto {
             }
         }
 
-        private int calculateSliderDuration(HitObjectSlider obj) =>
-            (int)Math.Ceiling(obj.Length * obj.RepeatCount / (100 * beatmap.SliderVelocity * speedVelocity / msPerQuarter));
+        private int CalculateSliderDuration(HitObjectSlider obj) =>
+            (int)Math.Ceiling(obj.Length * obj.RepeatCount / (100 * beatmap.SliderVelocity * this.speedVelocity / this.msPerQuarter));
 
         private TimingPoint GetNextTimingPoint(ref int index)
         {
@@ -92,26 +85,48 @@ namespace osu_nhauto {
             for (; index < beatmap.GetTimingPoints().Count; ++index)
             {
                 TimingPoint next = beatmap.GetTimingPoints()[index];
-                TimingPoint after = index + 1 >= beatmap.GetTimingPoints().Count ?  null : beatmap.GetTimingPoints()[index + 1];
+                TimingPoint after = index + 1 >= beatmap.GetTimingPoints().Count ? null : beatmap.GetTimingPoints()[index + 1];
 
                 if (next.MsPerQuarter > 0)
+                {
                     nextTimings[0] = next.MsPerQuarter;
+                    nextTimings[1] = 1;
+                }
                 else if (next.MsPerQuarter < 0)
                     nextTimings[1] = -100 / next.MsPerQuarter;
 
                 if (after == null || after.Time > next.Time)
-                {
-                    Console.WriteLine("Next timing point at {0}", next.Time);
                     return next;
-                }
             }
             return null;
         }
 
         private void UpdateTimingSettings()
         {
+            Console.WriteLine("{0}ms/quarter | {1}x speed vel", nextTimings[0], nextTimings[1]);
             msPerQuarter = nextTimings[0];
             speedVelocity = nextTimings[1];
+        }
+
+        private int GetTimeDiffFromNextObj(HitObject hitObj)
+        {
+            int index = beatmap.GetHitObjects().IndexOf(hitObj);
+            if (index >= beatmap.GetHitObjects().Count - 1)
+                return int.MaxValue;
+
+            int currEndTime = hitObj.Time;
+            switch (hitObj.Type & (HitObjectType)0b1000_1011)
+            {
+                case HitObjectType.Slider:
+                    currEndTime += CalculateSliderDuration(hitObj as HitObjectSlider);
+                    break;
+                case HitObjectType.Spinner:
+                    currEndTime = (hitObj as HitObjectSpinner).EndTime;
+                    break;
+            }
+            HitObject next = beatmap.GetHitObjects()[index + 1];
+
+            return beatmap.GetHitObjects()[index + 1].Time - currEndTime;
         }
 
         private Osu osuClient;
@@ -120,24 +135,8 @@ namespace osu_nhauto {
         public void ToggleRelax() => relaxRunning = !relaxRunning;
         public char GetKey1() => key1;
         public char GetKey2() => key2;
-        public void SetKey1(char key) {
-            WindowsInput.Native.VirtualKeyCode key1;
-            if (Enum.TryParse<WindowsInput.Native.VirtualKeyCode>("VK_" + key, out key1))
-            {
-                this.keyCode1 = key1;
-                this.key1 = key;
-
-            }
-        }
-        public void SetKey2(char key)
-        {
-            WindowsInput.Native.VirtualKeyCode key2;
-            if (Enum.TryParse<WindowsInput.Native.VirtualKeyCode>("VK_" + key, out key2))
-            {
-                this.keyCode2 = key2;
-                this.key2 = key;
-            }
-        }
+        public void SetKey1(char key) { this.keyCode1 = (WindowsInput.Native.VirtualKeyCode)(key); this.key1 = key; }
+        public void SetKey2(char key) { this.keyCode2 = (WindowsInput.Native.VirtualKeyCode)(key); this.key2 = key; }
         
         public bool IsAutoPilotRunning() => autopilotRunning;
         public bool IsRelaxRunning() => relaxRunning;
