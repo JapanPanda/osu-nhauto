@@ -19,14 +19,20 @@ namespace osu_nhauto
             osuProcess = processes.Length > 0 ? processes[0] : null;
 
             if (osuProcess != null)
+            {
+                System.Console.WriteLine("Found process");
                 memory = new Memory(osuProcess);
+            }
         }
 
         public void ObtainAddresses()
         {
             try
             {
-                int addressPtr = memory.FindSignature(new byte[] { 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, 0x1000, 0x10000000, "x????xx");
+                System.Console.WriteLine("Attempting to find signatures");
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+                int addressPtr = memory.FindSignature(new byte[] { 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, 0x5000, 0x20000000, "x????xx", 0x05000000);
                 audioTime = memory.ReadInt32(addressPtr + 0x1);
                 audioPlaying = audioTime + 0x24;
                 //34 C2 2F 05 50 9B 34 07 90 09 2D 07 50 9B 34 07 00 00 80 3F
@@ -35,6 +41,9 @@ namespace osu_nhauto
                 0x1000, 0x10000000, "xx??????????????xxxx");
 
                 timeMod = memory.ReadInt32(addressPtr + 0x4) + 0x10; */
+
+                stopwatch.Stop();
+                System.Console.WriteLine("Elapsed tiem to obtian addresses: {0}ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;
             }
             catch (System.Exception e)
@@ -57,6 +66,9 @@ namespace osu_nhauto
 
         public void UpdateWindowStatus()
         {
+            if (osuProcess != null && osuProcess.HasExited)
+                osuProcess = null;
+
             if (!IsOpen())
                 ObtainProcess();
         }

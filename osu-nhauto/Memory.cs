@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -21,9 +22,9 @@ namespace osu_nhauto
             this.process = process;
         }
 
-        public int FindSignature(byte[] signature, int regionSize, int scanSize, string Mask)
+        public int FindSignature(byte[] signature, int regionSize, int scanSize, string Mask, int start = -1)
         {
-            int startAddress = (int)process.MainModule.BaseAddress;
+            int startAddress = start > -1 ? start : (int)process.MainModule.BaseAddress;
             int endAddress = startAddress + scanSize;
 
             int currentAddress = startAddress;
@@ -73,20 +74,23 @@ namespace osu_nhauto
         private int FindPattern(byte[] source, byte[] pattern, string mask)
         {
             bool found = false;
+            int[] search = new int[mask.Length];
+            for (int i = 0, j = 0; i < mask.Length; ++i)
+            {
+                if (mask[i] == 'x')
+                    search[j++] = i + 1;
+            }
+            search = search.Where(i => i != 0).ToArray();
             for (int i = 0; i < source.Length - pattern.Length; i++)
             {
                 found = true;
-                for (int j = 0; j < pattern.Length; j++)
+                for (int j = 0; j < search.Length; j++)
                 {
-                    if (mask[j] == '?')
-                        continue;
-                    else if (mask[j] == 'x')
+                    int offset = search[j] - 1;
+                    if (source[i + offset] != pattern[offset])
                     {
-                        if (source[i + j] != pattern[j])
-                        {
-                            found = false;
-                            break;
-                        }
+                        found = false;
+                        break;
                     }
                 }
 
