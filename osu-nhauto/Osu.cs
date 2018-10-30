@@ -32,8 +32,8 @@ namespace osu_nhauto
                 System.Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                int addressPtr = memory.FindSignature(new byte[] { 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, 0x5000, 0x20000000, "x????xx", 0x05000000);
-                audioTime = memory.ReadInt32(addressPtr + 0x1);
+                int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00 }, "xxxx????", 0x06000000);
+                audioTime = memory.ReadInt32(addressPtr + 0x4);
                 audioPlaying = audioTime + 0x24;
                 //34 C2 2F 05 50 9B 34 07 90 09 2D 07 50 9B 34 07 00 00 80 3F
                 /*
@@ -50,6 +50,7 @@ namespace osu_nhauto
             {
                 System.Console.WriteLine("Trying to load memory when osu! isn't fully loaded yet");
                 System.Console.WriteLine(e.Message);
+                System.Console.WriteLine(e.StackTrace);
                 //loadedAddresses = false;
                 loadedAddresses = true;
             }
