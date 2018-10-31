@@ -67,14 +67,20 @@ namespace osu_nhauto
                         }
                         else
                             continue;
-
-                        byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                        int index = FindPattern(buffer, signature, mask, search);
-                        if (index != -1)
+                        try
                         {
-                            result = (int)mbi.BaseAddress + index;
-                            running = false;
-                            return;
+                            byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
+                            int index = FindPattern(buffer, signature, mask, search);
+                            if (index != -1)
+                            {
+                                result = (int)mbi.BaseAddress + index;
+                                running = false;
+                                return;
+                            }
+                        }
+                        catch (OverflowException e)
+                        {
+                            throw new Exception("Loading memory when osu! isn't fully loaded yet");
                         }
                     } while (running);
                 });
