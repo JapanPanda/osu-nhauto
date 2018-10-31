@@ -67,14 +67,21 @@ namespace osu_nhauto
                         }
                         else
                             continue;
-
-                        byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                        int index = FindPattern(buffer, signature, mask, search);
-                        if (index != -1)
+                        try
                         {
-                            result = (int)mbi.BaseAddress + index;
+                            byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
+                            int index = FindPattern(buffer, signature, mask, search);
+                            if (index != -1)
+                            {
+                                result = (int)mbi.BaseAddress + index;
+                                running = false;
+                                return;
+                            }
+                        }
+                        catch (OverflowException e)
+                        {
+                            result = -1;
                             running = false;
-                            return;
                         }
                     } while (running);
                 });

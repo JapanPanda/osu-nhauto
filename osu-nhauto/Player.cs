@@ -29,8 +29,6 @@ namespace osu_nhauto {
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
             msPerQuarter = currHitObject.Time;
-            Console.WriteLine(this.keyCode1);
-            Console.WriteLine(this.keyCode2);
 
             bool shouldPressSecondary = false;
             int lastTime = osuClient.GetAudioTime();
@@ -40,6 +38,7 @@ namespace osu_nhauto {
                 Console.WriteLine(currentTime);
                 if (currentTime > lastTime)
                 {
+                    lastTime = currentTime;
                     if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
                     {
                         UpdateTimingSettings();
@@ -50,7 +49,7 @@ namespace osu_nhauto {
                     {
                         shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
                         inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
-                        int delay = 10;                       
+                        int delay = 60;                       
                         switch (currHitObject.Type & (HitObjectType)0b1000_1011)
                         {
                             case HitObjectType.Slider:
@@ -68,7 +67,6 @@ namespace osu_nhauto {
                         inputSimulator.Keyboard.KeyUp(shouldPressSecondary ? keyCode2 : keyCode1);
                         currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
                     }
-                    lastTime = currentTime;
                 }
                 else if (currentTime < lastTime)
                 {

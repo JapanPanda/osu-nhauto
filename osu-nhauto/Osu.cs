@@ -44,7 +44,7 @@ namespace osu_nhauto
                 timeMod = memory.ReadInt32(addressPtr + 0x4) + 0x10; */
 
                 stopwatch.Stop();
-                System.Console.WriteLine("Elapsed tiem to obtian addresses: {0}ms", stopwatch.ElapsedMilliseconds);
+                System.Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;
             }
             catch (System.Exception e)
@@ -53,14 +53,14 @@ namespace osu_nhauto
                 System.Console.WriteLine(e.Message);
                 System.Console.WriteLine(e.StackTrace);
                 //loadedAddresses = false;
-                loadedAddresses = true;
+                loadedAddresses = false;
             }
         }
 
         public string GetWindowTitle()
         {
             if (!IsOpen())
-                return "";
+                return string.Empty;
 
             osuProcess.Refresh();
             return osuProcess.MainWindowTitle;
