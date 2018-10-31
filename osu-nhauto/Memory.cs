@@ -80,7 +80,8 @@ namespace osu_nhauto
                         }
                         catch (OverflowException e)
                         {
-                            throw new Exception("Loading memory when osu! isn't fully loaded yet");
+                            result = -1;
+                            running = false;
                         }
                     } while (running);
                 });
