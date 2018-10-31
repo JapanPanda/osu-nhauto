@@ -19,12 +19,32 @@ namespace osu_nhauto {
 	    {
             this.keyCode1 = (WindowsInput.Native.VirtualKeyCode)(this.key1);
             this.keyCode2 = (WindowsInput.Native.VirtualKeyCode)(this.key2);
-           osuClient = osu;
+            this.osuClient = osu;
         }
 
         public void Update()
         {
             //Mods timeMod = osuClient.GetTimeMod();
+
+            //if (this.autopilotRunning)
+            Task.Run(() => {
+                AutoPilot();
+            });
+
+            if (this.relaxRunning)
+                Relax();
+        }
+
+        public async void AutoPilot()
+        {
+            while (true)
+            {
+                await Task.Delay(1);
+            }
+        }
+
+        public void Relax()
+        {
             int nextTimingPtIndex = 0, nextHitObjIndex = 0;
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
@@ -32,10 +52,13 @@ namespace osu_nhauto {
 
             bool shouldPressSecondary = false;
             int lastTime = osuClient.GetAudioTime();
+
+
+            // Relax 
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime();
-                if (currentTime > lastTime)
+                if (this.relaxRunning && currentTime > lastTime)
                 {
                     lastTime = currentTime;
                     if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
