@@ -29,6 +29,7 @@ namespace osu_nhauto
         {
             try
             {
+                while (osuProcess.MainWindowHandle.ToInt32() == 0) ;
                 System.Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
