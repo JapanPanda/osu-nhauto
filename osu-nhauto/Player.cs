@@ -35,7 +35,6 @@ namespace osu_nhauto {
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime();
-                Console.WriteLine(currentTime);
                 if (currentTime > lastTime)
                 {
                     lastTime = currentTime;
@@ -49,7 +48,7 @@ namespace osu_nhauto {
                     {
                         shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
                         inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
-                        int delay = 60;                       
+                        int delay = 20;                       
                         switch (currHitObject.Type & (HitObjectType)0b1000_1011)
                         {
                             case HitObjectType.Slider:
