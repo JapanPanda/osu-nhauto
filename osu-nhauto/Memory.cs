@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Windows.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -43,28 +43,30 @@ namespace osu_nhauto
             int currentAddress = startAddress;
             uint mbiSize = (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION));
 
-            int result = -1;
+            int lockObj = 0, result = -1;
             bool running = true;
-            object lockObject = new object();
-            for (int i = 0; i < 8; ++i)
+            List<int> cache = new List<int>();
+            for (int i = 0; i < 16; ++i)
             {
                 Task.Run(() =>
                 {
                     do
                     {
                         MEMORY_BASIC_INFORMATION mbi;
-                        int area;
-                        lock (lockObject)
+                        if (Interlocked.Exchange(ref lockObj, 1) == 0)
                         {
                             VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
-                            area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
+                            int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
                             if (currentAddress == area)
                             {
                                 running = false;
-                                break;
+                                return;
                             }
                             currentAddress = area;
+                            Interlocked.Exchange(ref lockObj, 0);
                         }
+                        else
+                            continue;
 
                         byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
                         int index = FindPattern(buffer, signature, mask, search);
@@ -72,12 +74,12 @@ namespace osu_nhauto
                         {
                             result = (int)mbi.BaseAddress + index;
                             running = false;
-                            break;
+                            return;
                         }
                     } while (running);
                 });
             }
-            while (result == -1 || running) {}
+            while (running) {}
             if (result != -1)
                 return result;
             else
