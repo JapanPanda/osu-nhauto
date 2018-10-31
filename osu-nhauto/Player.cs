@@ -17,7 +17,9 @@ namespace osu_nhauto {
 
         public Player(Osu osu)
 	    {
-            osuClient = osu;
+            this.keyCode1 = (WindowsInput.Native.VirtualKeyCode)(this.key1);
+            this.keyCode2 = (WindowsInput.Native.VirtualKeyCode)(this.key2);
+           osuClient = osu;
         }
 
         public void Update()
@@ -27,12 +29,15 @@ namespace osu_nhauto {
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
             msPerQuarter = currHitObject.Time;
+            Console.WriteLine(this.keyCode1);
+            Console.WriteLine(this.keyCode2);
 
             bool shouldPressSecondary = false;
             int lastTime = osuClient.GetAudioTime();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime();
+                Console.WriteLine(currentTime);
                 if (currentTime > lastTime)
                 {
                     if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
