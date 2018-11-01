@@ -66,7 +66,7 @@ namespace osu_nhauto {
                     if (currHitObject != null)
                     {
                         int objTimeDiff = currHitObject.Time - currentTime;
-                        if (objTimeDiff <= 200)
+                        if (objTimeDiff <= 250)
                         {
                             AutoPilot(currHitObject, currentTime, resConstants);
                             //Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65536 / 1920), (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65536 / 1080, 0, 0);
@@ -105,31 +105,34 @@ namespace osu_nhauto {
         public float[] CalculatePlayfieldResolution()
         {
             Osu.RECT resolution = this.osuClient.GetResolution();
+            // TODO calculate border width and height for them borderless/fullscreen users rather than assume bordered window on Windows 10
             int resX = resolution.Right - resolution.Left - 6;
-            int resY = resolution.Bottom - resolution.Top - 29;
+            int resY = resolution.Bottom - resolution.Top - 29 - 6;
             Console.WriteLine("Left: {0} x Right: {1} x Top: {2} x Bottom: {3}", resolution.Left, resolution.Right, resolution.Top, resolution.Bottom);
             Console.WriteLine("{0} x {1}", resolution.Right - resolution.Left - 6, resolution.Bottom - resolution.Top - 29 - 6);
             // calculate how big playfield is going to be
             //int modifiedXRes = (int)((float)4 / 3 * (resolution.Bottom - resolution.Top));
-            int playfieldX = (int)(resY + 55);
-            int playfieldY = (int)(0.75f * resY + 39);
-            int playfieldOffsetX = (int)(resX - playfieldX) / 2;
+            float playfieldY = 0.8f * resY;
+            float playfieldX = playfieldY * 4 / 3;
 
-            int playfieldOffsetY = (int)(resY - playfieldY + 59) / 2;
+            float playfieldOffsetX = (resX - playfieldX) / 2 + 3;
+            float playfieldOffsetY = (resY - 0.95385f * playfieldY) / 2 + 32;
+
             Console.WriteLine("CALCULATED PLAYFIELD: {0} x {1}", playfieldX, playfieldY);
             Console.WriteLine("CALCULATED OFFSETS: {0} x {1}", playfieldOffsetX, playfieldOffsetY);
 
             // calculate the left side offset and how much to move
-            int totalOffsetX = resolution.Left + playfieldOffsetX;
-            int totalOffsetY = resolution.Top + playfieldOffsetY;
-            float ratioX = (float)playfieldX / 512;
-            float ratioY = (float)playfieldY / 384;
+            float totalOffsetX = resolution.Left + playfieldOffsetX;
+            float totalOffsetY = resolution.Top + playfieldOffsetY;
+            float ratioX = playfieldX / 512;
+            float ratioY = playfieldY / 384;
 
             return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
         public void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants)
         {
+            // TODO check if cursor is not on position and if true move cursor else do nothing
             Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65536 / 1920), (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65536 / 1080, 0, 0);
         }
 
