@@ -1,10 +1,24 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows;
 using osu.Shared;
 
 namespace osu_nhauto
 {
     public sealed class Osu
     {
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool GetWindowRect(IntPtr hWnd, ref RECT Rect);
+
+        public struct RECT
+        {
+            public int Left { get; set; }
+            public int Top { get; set; }
+            public int Right { get; set; }
+            public int Bottom { get; set; }
+        }
+
         public Osu()
         {
             ObtainProcess();
@@ -21,6 +35,9 @@ namespace osu_nhauto
             if (osuProcess != null)
             {
                 System.Console.WriteLine("Found process");
+                IntPtr handle = osuProcess.MainWindowHandle;
+                this.resolution = new RECT();
+                Console.WriteLine(GetWindowRect(handle, ref resolution));
                 memory = new Memory(osuProcess);
             }
         }
@@ -92,14 +109,16 @@ namespace osu_nhauto
         }
 
         public int GetAudioTime() => memory.ReadInt32(audioTime);
-        public bool IsAddressesLoaded() => loadedAddresses;
+        public bool IsAddressesLoaded() => this.loadedAddresses;
         public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
         public Process GetProcess() => this.osuProcess;
+        public RECT GetResolution() => this.resolution;
         private Process osuProcess;
         private Memory memory;
         private int audioTime;
         private int audioPlaying;
         private int timeMod;
+        private RECT resolution;
         private bool loadedAddresses;
     }
 }

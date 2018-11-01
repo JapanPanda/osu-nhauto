@@ -7,6 +7,7 @@ using osu.Shared;
 using osu_database_reader.Components.Beatmaps;
 using osu_database_reader.Components.HitObjects;
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 
 namespace osu_nhauto {
 
@@ -14,6 +15,9 @@ namespace osu_nhauto {
     {
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern short VkKeyScanEx(char ch, IntPtr dwhkl);
+        [System.Runtime.InteropServices.DllImportAttribute("user32.dll", EntryPoint = "SetCursorPos")]
+        [return: System.Runtime.InteropServices.MarshalAsAttribute(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        public static extern bool SetCursorPos(int X, int Y);
 
         public Player(Osu osu)
 	    {
@@ -26,10 +30,10 @@ namespace osu_nhauto {
         {
             //Mods timeMod = osuClient.GetTimeMod();
 
-            //if (this.autopilotRunning)
-            Task.Run(() => {
-                AutoPilot();
-            });
+            //if (this.autopilotRunning) 
+                Task.Run(() => {
+                    AutoPilot();
+                });
 
             if (this.relaxRunning)
                 Relax();
@@ -37,9 +41,53 @@ namespace osu_nhauto {
 
         public async void AutoPilot()
         {
-            while (true)
+            int nextTimingPtIndex = 0, nextHitObjIndex = 0;
+            TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
+            HitObject currHitObject = beatmap.GetHitObjects()[0];
+            msPerQuarter = currHitObject.Time;
+            Osu.RECT resolution = this.osuClient.GetResolution();
+            int resX = resolution.Right - resolution.Left - 6;
+            int resY = resolution.Bottom - resolution.Top - 29;
+            Console.WriteLine("Left: {0} x Right: {1} x Top: {2} x Bottom: {3}", resolution.Left, resolution.Right, resolution.Top, resolution.Bottom);
+            Console.WriteLine("{0} x {1}", resolution.Right - resolution.Left - 6, resolution.Bottom - resolution.Top - 29);
+            int lastTime = osuClient.GetAudioTime();
+            // calculate how big playfield is going to be
+            int modifiedXRes = (int)((float)4 / 3 * (resolution.Bottom - resolution.Top));
+            int playfieldX = (int)(resY + 55);
+            int playfieldY = (int)(0.75f * resY + 39);
+            int playfieldOffsetX = (int)(resX - playfieldX) / 2;
+
+            int playfieldOffsetY = (int)(resY - playfieldY + 59) / 2;
+            Console.WriteLine("CALCULATED PLAYFIELD: {0} x {1}", playfieldX, playfieldY);
+            Console.WriteLine("CALCULATED OFFSETS: {0} x {1}", playfieldOffsetX, playfieldOffsetY);
+
+            // calculate the left side offset and how much to move
+            int totalOffsetX = resolution.Left + playfieldOffsetX;
+            int totalOffsetY = resolution.Top + playfieldOffsetY;
+            float ratioX = (float)playfieldX / 512;
+            float ratioY = (float)playfieldY / 383;
+
+            while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
-                await Task.Delay(1);
+                int currentTime = osuClient.GetAudioTime();
+                if (currentTime > lastTime)
+                {
+                    lastTime = currentTime;
+                    if (currHitObject != null && currentTime >= currHitObject.Time - 300)
+                    {
+                        
+                        Console.WriteLine("SETTING TO: {0} x {1}", (int)(currHitObject.X * ratioX) + totalOffsetX, (int)(currHitObject.Y * ratioY) + totalOffsetY);
+                        SetCursorPos((int)(currHitObject.X * ratioX) + totalOffsetX, (int)(currHitObject.Y * ratioY) + totalOffsetY);
+                        currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
+                    }
+                    await Task.Delay(10);
+                }
+                else if (currentTime < lastTime)
+                {
+                    Update();
+                    break;
+                }
+
             }
         }
 
