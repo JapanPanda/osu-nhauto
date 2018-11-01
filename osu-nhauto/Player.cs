@@ -15,9 +15,12 @@ namespace osu_nhauto {
     {
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern short VkKeyScanEx(char ch, IntPtr dwhkl);
-        [System.Runtime.InteropServices.DllImportAttribute("user32.dll", EntryPoint = "SetCursorPos")]
-        [return: System.Runtime.InteropServices.MarshalAsAttribute(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        [DllImport("user32.dll", EntryPoint = "SetCursorPos")]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetCursorPos(int X, int Y);
+
+        [DllImport("user32.dll", EntryPoint = "mouse_event", CallingConvention = CallingConvention.Winapi)]
+        internal static extern void Mouse_Event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
         public Player(Osu osu)
 	    {
@@ -31,28 +34,83 @@ namespace osu_nhauto {
             //Mods timeMod = osuClient.GetTimeMod();
 
             //if (this.autopilotRunning) 
+            /*
                 Task.Run(() => {
                     AutoPilot();
                 });
+                */
+            //new Thread(AutoPilot).Start();
 
-            if (this.relaxRunning)
-                Relax();
-        }
-
-        public async void AutoPilot()
-        {
             int nextTimingPtIndex = 0, nextHitObjIndex = 0;
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
-            msPerQuarter = currHitObject.Time;
+            msPerQuarter = nextTimingPt.MsPerQuarter;
+
+            bool shouldPressSecondary = false;
+            int lastTime = osuClient.GetAudioTime();
+
+            float[] resConstants = CalculatePlayfieldResolution();
+
+            while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
+            {
+                int currentTime = osuClient.GetAudioTime();
+                if (currentTime > lastTime)
+                {
+                    lastTime = currentTime;
+                    if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
+                    {
+                        UpdateTimingSettings();
+                        ++nextTimingPtIndex;
+                        nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
+                    }
+                    if (currHitObject != null)
+                    {
+                        int objTimeDiff = currHitObject.Time - currentTime;
+                        if (objTimeDiff <= 200)
+                        {
+                            AutoPilot(currHitObject, currentTime, resConstants);
+                            //Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65536 / 1920), (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65536 / 1080, 0, 0);
+                        }
+                        if (objTimeDiff <= 0)
+                        {
+                            Relax(currHitObject, ref shouldPressSecondary);
+                            currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
+                        }
+                        /*
+                        if (currHitObject != null && currentTime >= currHitObject.Time - 200)
+                        {
+                            //Mouse_Event(0x1 | 0x8000, ((int)(currHitObject.X * ratioX) + totalOffsetX) * 65536 / 1920, ((int)(currHitObject.Y * ratioY) + totalOffsetY) * 65536 / 1080, 0, 0);
+                            //Console.WriteLine("SETTING TO: {0} x {1}", (int)(currHitObject.X * ratioX) + totalOffsetX, (int)(currHitObject.Y * ratioY) + totalOffsetY);
+                            //SetCursorPos((int)(currHitObject.X * ratioX) + totalOffsetX, (int)(currHitObject.Y * ratioY) + totalOffsetY);
+                            //Mouse_Event(0x1 | 0x8000, ((int)(currHitObject.X * ratioX) + totalOffsetX) * 65536 / 1920, ((int)(currHitObject.Y * ratioY) + totalOffsetY) * 65536 / 1080, 0, 0);
+                            //currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
+                        }
+                        
+                        if (this.relaxRunning)
+                            Relax(currHitObject, ref shouldPressSecondary);
+
+                        currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
+                        */
+                    }
+                }
+                else if (currentTime < lastTime)
+                {
+                    Update();
+                    break;
+                }
+                Thread.Sleep(1);
+            }
+        }
+
+        public float[] CalculatePlayfieldResolution()
+        {
             Osu.RECT resolution = this.osuClient.GetResolution();
             int resX = resolution.Right - resolution.Left - 6;
             int resY = resolution.Bottom - resolution.Top - 29;
             Console.WriteLine("Left: {0} x Right: {1} x Top: {2} x Bottom: {3}", resolution.Left, resolution.Right, resolution.Top, resolution.Bottom);
-            Console.WriteLine("{0} x {1}", resolution.Right - resolution.Left - 6, resolution.Bottom - resolution.Top - 29);
-            int lastTime = osuClient.GetAudioTime();
+            Console.WriteLine("{0} x {1}", resolution.Right - resolution.Left - 6, resolution.Bottom - resolution.Top - 29 - 6);
             // calculate how big playfield is going to be
-            int modifiedXRes = (int)((float)4 / 3 * (resolution.Bottom - resolution.Top));
+            //int modifiedXRes = (int)((float)4 / 3 * (resolution.Bottom - resolution.Top));
             int playfieldX = (int)(resY + 55);
             int playfieldY = (int)(0.75f * resY + 39);
             int playfieldOffsetX = (int)(resX - playfieldX) / 2;
@@ -65,84 +123,36 @@ namespace osu_nhauto {
             int totalOffsetX = resolution.Left + playfieldOffsetX;
             int totalOffsetY = resolution.Top + playfieldOffsetY;
             float ratioX = (float)playfieldX / 512;
-            float ratioY = (float)playfieldY / 383;
+            float ratioY = (float)playfieldY / 384;
 
-            while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
-            {
-                int currentTime = osuClient.GetAudioTime();
-                if (currentTime > lastTime)
-                {
-                    lastTime = currentTime;
-                    if (currHitObject != null && currentTime >= currHitObject.Time - 300)
-                    {
-                        
-                        Console.WriteLine("SETTING TO: {0} x {1}", (int)(currHitObject.X * ratioX) + totalOffsetX, (int)(currHitObject.Y * ratioY) + totalOffsetY);
-                        SetCursorPos((int)(currHitObject.X * ratioX) + totalOffsetX, (int)(currHitObject.Y * ratioY) + totalOffsetY);
-                        currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                    }
-                    await Task.Delay(10);
-                }
-                else if (currentTime < lastTime)
-                {
-                    Update();
-                    break;
-                }
-
-            }
+            return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
-        public void Relax()
+        public void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants)
         {
-            int nextTimingPtIndex = 0, nextHitObjIndex = 0;
-            TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
-            HitObject currHitObject = beatmap.GetHitObjects()[0];
-            msPerQuarter = nextTimingPt.MsPerQuarter;
+            Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65536 / 1920), (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65536 / 1080, 0, 0);
+        }
 
-            bool shouldPressSecondary = false;
-            int lastTime = osuClient.GetAudioTime();
-
-            while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
+        public void Relax(HitObject currHitObject, ref bool shouldPressSecondary)
+        {
+            shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
+            inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
+            int delay = 20;
+            switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
-                int currentTime = osuClient.GetAudioTime();
-                if (this.relaxRunning && currentTime > lastTime)
-                {
-                    lastTime = currentTime;
-                    if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
-                    {
-                        UpdateTimingSettings();
-                        ++nextTimingPtIndex;
-                        nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
-                    }
-                    if (currHitObject != null && currentTime >= currHitObject.Time)
-                    {
-                        shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
-                        inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
-                        int delay = 20;                       
-                        switch (currHitObject.Type & (HitObjectType)0b1000_1011)
-                        {
-                            case HitObjectType.Slider:
-                                HitObjectSlider slider = currHitObject as HitObjectSlider;
-                                delay += CalculateSliderDuration(slider);
-                                break;
-                            case HitObjectType.Spinner:
-                                HitObjectSpinner spinner = currHitObject as HitObjectSpinner;
-                                delay += spinner.EndTime - spinner.Time;
-                                break;
-                            default:
-                                break;
-                        }
-                        Thread.Sleep(delay);
-                        inputSimulator.Keyboard.KeyUp(shouldPressSecondary ? keyCode2 : keyCode1);
-                        currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                    }
-                }
-                else if (currentTime < lastTime)
-                {
-                    Update();
+                case HitObjectType.Slider:
+                    HitObjectSlider slider = currHitObject as HitObjectSlider;
+                    delay += CalculateSliderDuration(slider);
                     break;
-                }
-                Thread.Sleep(1);
+                case HitObjectType.Spinner:
+                    HitObjectSpinner spinner = currHitObject as HitObjectSpinner;
+                    delay += spinner.EndTime - spinner.Time;
+                    break;
+                default:
+                    break;
             }
+            Thread.Sleep(delay);
+            inputSimulator.Keyboard.KeyUp(shouldPressSecondary ? keyCode2 : keyCode1);
         }
 
         private int CalculateSliderDuration(HitObjectSlider obj) =>

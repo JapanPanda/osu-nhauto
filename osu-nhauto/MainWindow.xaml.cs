@@ -50,7 +50,7 @@ namespace osu_nhauto
         public MainWindow()
         {
             InitializeComponent();
-            Loaded += OnLoaded;
+            //Loaded += OnLoaded;
             InitializeEvents();
         }
 

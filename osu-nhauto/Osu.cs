@@ -35,9 +35,7 @@ namespace osu_nhauto
             if (osuProcess != null)
             {
                 System.Console.WriteLine("Found process");
-                IntPtr handle = osuProcess.MainWindowHandle;
-                this.resolution = new RECT();
-                Console.WriteLine(GetWindowRect(handle, ref resolution));
+                GetResolution();
                 memory = new Memory(osuProcess);
             }
         }
@@ -112,7 +110,7 @@ namespace osu_nhauto
         public bool IsAddressesLoaded() => this.loadedAddresses;
         public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
         public Process GetProcess() => this.osuProcess;
-        public RECT GetResolution() => this.resolution;
+        public RECT GetResolution() { GetWindowRect(osuProcess.MainWindowHandle, ref resolution); return this.resolution; }
         private Process osuProcess;
         private Memory memory;
         private int audioTime;
