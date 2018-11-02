@@ -78,7 +78,7 @@ namespace osu_nhauto
                                 return;
                             }
                         }
-                        catch (OverflowException e)
+                        catch (OverflowException)
                         {
                             result = -1;
                             running = false;
