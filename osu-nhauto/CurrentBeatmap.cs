@@ -69,11 +69,16 @@ namespace osu_nhauto {
                 int startParsing = 0;
                 while ((line = sr.ReadLine()) != null)
                 {
-                    if (line.StartsWith("[") || line.Length == 0)
+                    if (line.Length == 0)
+                        continue;
+
+                    if (line.StartsWith("["))
                         startParsing = 0;
 
-                    if (line.StartsWith("SliderMultiplier:"))
-                        SliderVelocity = double.Parse(line.Split(':')[1]);
+                    if (line.StartsWith("CircleSize:"))
+                        circleSize = double.Parse(line.Split(':')[1]);
+                    else if (line.StartsWith("SliderMultiplier:"))
+                        sliderVelocity = double.Parse(line.Split(':')[1]);
                     else if (line.Equals("[TimingPoints]"))
                         startParsing = 1;
                     else if (line.Equals("[HitObjects]"))
@@ -91,7 +96,9 @@ namespace osu_nhauto {
 
         public ReadOnlyCollection<TimingPoint> GetTimingPoints() => timingPoints;
         public ReadOnlyCollection<HitObject> GetHitObjects() => hitObjects;
-        public double SliderVelocity = 1.0;
+
+        public double circleSize { get; protected set; }
+        public double sliderVelocity { get; protected set; }
 
         private InterProcessOsu ipc;
         private string filePath = null;
