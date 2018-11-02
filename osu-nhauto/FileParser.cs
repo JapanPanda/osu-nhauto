@@ -45,7 +45,8 @@ namespace osu_nhauto
                     difficulty = strippedWindowTitle.Substring(i);
                 }
             }
-            difficultyStrippedTitle = difficultyStrippedTitle.Replace(".", "");
+            difficultyStrippedTitle = difficultyStrippedTitle.Replace(".", string.Empty);
+            difficultyStrippedTitle = difficultyStrippedTitle.Replace('/', '_');
             this.fileName = difficultyStrippedTitle;
             string[] songFolderList = Directory.GetDirectories(baseFilePath + "Songs\\", "*" + difficultyStrippedTitle);
 

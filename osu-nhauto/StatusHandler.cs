@@ -10,7 +10,7 @@ namespace osu_nhauto {
 
     public enum GameState
     {
-        NotOpen, Loading, Idle, Playing
+        Error, NotOpen, Loading, Idle, Playing
     }
 
     public class StatusHandler
@@ -39,6 +39,9 @@ namespace osu_nhauto {
                     break;
                 case GameState.Loading:
                     Main.StatusWindow.Inlines.Add(new Run("Loading") { Foreground = Brushes.Green });
+                    break;
+                case GameState.Error:
+                    Main.StatusWindow.Inlines.Add(new Run("Error Loading osu!Nhauto") { Foreground = Brushes.DarkRed });
                     break;
                 default:
                     Main.StatusWindow.Inlines.Add(new Run("UNKNOWN ? ? ?") { Foreground = Brushes.DarkRed });
@@ -122,6 +125,10 @@ namespace osu_nhauto {
             else if (MainWindow.osu.GetWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1)
             {
                 state = GameState.Playing;
+            }
+            else if (!MainWindow.osu.IsAddressesLoaded())
+            {
+                state = GameState.Error;
             }
             else
             {
