@@ -118,7 +118,6 @@ namespace osu_nhauto
                 k = 0;
                 for (int j = 0; j < search.Length; ++j)
                 {
-                    cancellationToken.Token.ThrowIfCancellationRequested();
                     if (source[i + search[j]] != pattern[search[j]])
                         break;
                     if (j == beforeEnd)
