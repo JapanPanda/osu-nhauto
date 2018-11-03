@@ -89,7 +89,6 @@ namespace osu_nhauto {
                             Mouse_Event(0x1 | 0x8000, newX, newY, 0, 0);
                             cursorX = newX;
                             cursorY = newY;
-
                         }
                         else
                         {
@@ -113,10 +112,10 @@ namespace osu_nhauto {
                                 //velX = Math.Abs(currHitObject.X - lastHitObject.X) > 180 ? velX *= (float)9.4 : velX *= (float)8;
 
                                 //velY = Math.Abs(currHitObject.Y - lastHitObject.Y) > 140 ? velY *= (float)9.4 : velY *= (float)8;
-
+                                
                                 if (Math.Abs(currHitObject.X - lastHitObject.X) > 250)
                                 {
-                                    velX *= (float)9.4;
+                                    velX *= (float)9.8;
                                 }
                                 else if (Math.Abs(currHitObject.X - lastHitObject.X) > 180)
                                 {
@@ -124,20 +123,21 @@ namespace osu_nhauto {
                                 }
                                 else
                                 {
-                                    velX *= (float)8;
+                                    velX *= (float)8.5;
                                 }
-                                if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 180)
+                                if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 250)
                                 {
-                                    velY *= (float)9.4;
+                                    velY *= (float)9.8;
                                 }
-                                else if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 140)
+                                else if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 180)
                                 {
                                     velY *= (float)11.54;
                                 }
                                 else
                                 {
-                                    velY *= (float)8;
+                                    velY *= (float)8.5;
                                 }
+                                
 
                                 Console.WriteLine("New Vel: {0} x {1}", velX, velY);
                             }
@@ -188,36 +188,21 @@ namespace osu_nhauto {
         private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
         {
             if (currHitObject == null)
-            {
                 return;
-            }
-            
-            //Console.WriteLine("Moving {0} x {1}", velX, velY);
-            //if (cursorX != newX || cursorY != newY)
-            //{
-            //    Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
-            //    cursorX = (int)velX;
-            //    cursorY = (int)velY;
-            //}
-            // TODO check if cursor is not on position and if true move cursor else do nothing
+
             GetCursorPos(out cursorPos);
             Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
             float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
             if (xDiff == 0 || (velX > 0 && xDiff >= 0) || (velX < 0 && xDiff <= 0))
-                velX = 0;
+                velX = Math.Abs(xDiff) >= 3 ? -xDiff * 1.33f : 0;
 
             if (yDiff == 0 || (velY > 0 && yDiff >= 0) || (velY < 0 && yDiff <= 0))
-                velY = 0;
+                velY = Math.Abs(yDiff) >= 3 ? -yDiff * 1.33f : 0;
 
             missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
             missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
 
-            /*
-            Console.WriteLine($"Vel({velX}, {velY})");
-            Console.WriteLine($"TruncVel({(velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX))}, {(velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY))}");
-            Console.WriteLine($"Missing({missingX}, {missingY})");
-            */
             if (Math.Abs(missingX) >= 1)
             {
                 int deltaX = missingX > 0 ? (int)Math.Floor(missingX) : (int)Math.Ceiling(missingX);
@@ -231,9 +216,7 @@ namespace osu_nhauto {
                 velY += deltaY;
                 missingY -= deltaY;
             }
-            //Console.WriteLine($"NewMissing({missingX}, {missingY})");
-            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
-            
+            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);           
         }
 
         private float missingX, missingY;
