@@ -50,7 +50,7 @@ namespace osu_nhauto
                         {
                             int status = VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
                             int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
-                            if (currentAddress == area)
+                            if ((int)mbi.RegionSize < 0 || currentAddress == area)
                             {
                                 running = false;
                                 return;
