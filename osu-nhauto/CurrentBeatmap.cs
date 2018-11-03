@@ -97,8 +97,8 @@ namespace osu_nhauto {
         public ReadOnlyCollection<TimingPoint> GetTimingPoints() => timingPoints;
         public ReadOnlyCollection<HitObject> GetHitObjects() => hitObjects;
 
-        public double circleSize { get; protected set; }
-        public double sliderVelocity { get; protected set; }
+        public double circleSize { get; private set; }
+        public double sliderVelocity { get; private set; }
 
         private InterProcessOsu ipc;
         private string filePath = null;

@@ -11,17 +11,10 @@ namespace osu_nhauto
     class Memory
     {
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool ReadProcessMemory
-            (IntPtr hProcess,
-            IntPtr lpBaseAddress,
-            [Out] byte[] lpBuffer,
-            int dwSize,
-            out IntPtr lpNumberOfBytesRead);
+        private static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out IntPtr lpNumberOfBytesRead);
 
         [DllImport("kernel32.dll")]
         private static extern int VirtualQueryEx(IntPtr hProcess, int lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, uint dwLength);
-
-        private Process process;
 
         public Memory(Process process)
         {
@@ -44,62 +37,47 @@ namespace osu_nhauto
             uint mbiSize = (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION));
 
             int lockObj = 0, result = -1;
-            running = true;
-            List<int> cache = new List<int>();
-
-            cancellationToken = new CancellationTokenSource();
-
-            for (int i = 0; i < 16; ++i)
+            bool running = true;
+            Task[] runningTasks = new Task[16];
+            for (int i = 0; i < runningTasks.Length; ++i)
             {
-                Task.Run(() =>
+                runningTasks[i] = Task.Run(() =>
                 {
-                    try
+                    do
                     {
-                        do
+                        MEMORY_BASIC_INFORMATION mbi;
+                        if (Interlocked.Exchange(ref lockObj, 1) == 0)
                         {
-                            MEMORY_BASIC_INFORMATION mbi;
-                            cancellationToken.Token.ThrowIfCancellationRequested();
-                            if (Interlocked.Exchange(ref lockObj, 1) == 0)
+                            int status = VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
+                            int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
+                            if (status == 0 || currentAddress == area)
                             {
-                                VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
-                                int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
-                                if (currentAddress == area)
-                                {
-                                    running = false;
-                                    cancellationToken.Cancel();
-                                    return;
-                                }
-                                currentAddress = area;
-                                Interlocked.Exchange(ref lockObj, 0);
-                            }
-                            else
-                                continue;
-                            try
-                            {
-                                byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                                int index = FindPattern(buffer, signature, mask, search);
-                                if (index != -1)
-                                {
-                                    result = (int)mbi.BaseAddress + index;
-                                    running = false;
-                                    cancellationToken.Cancel();
-                                    return;
-                                }
-                            }
-                            catch (OverflowException)
-                            {
-                                result = -1;
+                                running = false;
                                 return;
                             }
-                        } while (running);
-                    }
-                    catch (System.OperationCanceledException)
-                    {
-                        Console.WriteLine("Finished getting address, cleaning up now.");
-                    }
+                            currentAddress = area;
+                            Interlocked.Exchange(ref lockObj, 0);
+                        }
+                        else
+                            continue;
+
+                        if (mbi.AllocationProtect == 0)
+                            continue;
+
+                        byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
+                        int index = FindPattern(buffer, signature, mask, search, ref running);
+                        if (index != -1)
+                        {
+                            result = (int)mbi.BaseAddress + index;
+                            running = false;
+                            return;
+                        }
+                    } while (running);
                 });
             }
-            while (running) {}
+            Task.WaitAll(runningTasks);
+            GC.Collect();
+
             if (result != -1) 
                 return result;
             else
@@ -131,11 +109,11 @@ namespace osu_nhauto
             return BitConverter.ToBoolean(buffer, 0);
         }
 
-        private int FindPattern(byte[] source, byte[] pattern, string mask, int[] search)
+        private int FindPattern(byte[] source, byte[] pattern, string mask, int[] search, ref bool running)
         {
             int size = source.Length - pattern.Length;
             int beforeEnd = search.Length - 1;
-            for (int i = -1, k; ++i < size; i += k)
+            for (int i = -1, k; running && ++i < size; i += k)
             {
                 k = 0;
                 for (int j = 0; j < search.Length; ++j)
@@ -152,9 +130,7 @@ namespace osu_nhauto
             return -1;
         }
 
-        public Process Process { get => process; }
-        private bool running;
-        private CancellationTokenSource cancellationToken;
+        public Process process { get; private set; }
     }
 
     [StructLayout(LayoutKind.Sequential)]
