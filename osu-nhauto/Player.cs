@@ -108,8 +108,37 @@ namespace osu_nhauto {
                                 //int newX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
                                 //int newY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
                                 //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
-                                velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime) * 12.34f;
-                                velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime) * 12.34f;
+                                velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime);
+                                velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
+                                //velX = Math.Abs(currHitObject.X - lastHitObject.X) > 180 ? velX *= (float)9.4 : velX *= (float)8;
+
+                                //velY = Math.Abs(currHitObject.Y - lastHitObject.Y) > 140 ? velY *= (float)9.4 : velY *= (float)8;
+
+                                if (Math.Abs(currHitObject.X - lastHitObject.X) > 250)
+                                {
+                                    velX *= (float)9.4;
+                                }
+                                else if (Math.Abs(currHitObject.X - lastHitObject.X) > 180)
+                                {
+                                    velX *= (float)11.54;
+                                }
+                                else
+                                {
+                                    velX *= (float)8;
+                                }
+                                if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 180)
+                                {
+                                    velY *= (float)9.4;
+                                }
+                                else if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 140)
+                                {
+                                    velY *= (float)11.54;
+                                }
+                                else
+                                {
+                                    velY *= (float)8;
+                                }
+
                                 Console.WriteLine("New Vel: {0} x {1}", velX, velY);
                             }
                         }
