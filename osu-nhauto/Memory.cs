@@ -50,7 +50,7 @@ namespace osu_nhauto
                         {
                             int status = VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
                             int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
-                            if (status == 0 || currentAddress == area)
+                            if (currentAddress == area)
                             {
                                 running = false;
                                 return;
@@ -63,15 +63,18 @@ namespace osu_nhauto
 
                         if (mbi.AllocationProtect == 0)
                             continue;
-
-                        byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                        int index = FindPattern(buffer, signature, mask, search, ref running);
-                        if (index != -1)
+                        try
                         {
-                            result = (int)mbi.BaseAddress + index;
-                            running = false;
-                            return;
+                            byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
+                            int index = FindPattern(buffer, signature, mask, search, ref running);
+                            if (index != -1)
+                            {
+                                result = (int)mbi.BaseAddress + index;
+                                running = false;
+                                return;
+                            }
                         }
+                        catch (OverflowException) { }
                     } while (running);
                 });
             }
