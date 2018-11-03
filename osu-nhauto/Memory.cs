@@ -47,7 +47,7 @@ namespace osu_nhauto
             running = true;
             List<int> cache = new List<int>();
 
-            var cancellationToken = new CancellationTokenSource();
+            cancellationToken = new CancellationTokenSource();
 
             for (int i = 0; i < 16; ++i)
             {
@@ -138,10 +138,9 @@ namespace osu_nhauto
             for (int i = -1, k; ++i < size; i += k)
             {
                 k = 0;
-                if (!running)
-                    break;
                 for (int j = 0; j < search.Length; ++j)
                 {
+                    cancellationToken.Token.ThrowIfCancellationRequested();
                     if (source[i + search[j]] != pattern[search[j]])
                         break;
                     if (j == beforeEnd)
@@ -154,7 +153,8 @@ namespace osu_nhauto
         }
 
         public Process Process { get => process; }
-        public bool running;
+        private bool running;
+        private CancellationTokenSource cancellationToken;
     }
 
     [StructLayout(LayoutKind.Sequential)]
