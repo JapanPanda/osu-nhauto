@@ -88,7 +88,7 @@ namespace osu_nhauto
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
-            
+
             Thread playerUpdateThread = new Thread(player.Update);
             new Thread(() =>
             {

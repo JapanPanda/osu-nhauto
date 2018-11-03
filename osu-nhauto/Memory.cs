@@ -46,44 +46,57 @@ namespace osu_nhauto
             int lockObj = 0, result = -1;
             running = true;
             List<int> cache = new List<int>();
+
+            var cancellationToken = new CancellationTokenSource();
+
             for (int i = 0; i < 16; ++i)
             {
                 Task.Run(() =>
                 {
-                    do
+                    try
                     {
-                        MEMORY_BASIC_INFORMATION mbi;
-                        if (Interlocked.Exchange(ref lockObj, 1) == 0)
+                        do
                         {
-                            VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
-                            int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
-                            if (currentAddress == area)
+                            MEMORY_BASIC_INFORMATION mbi;
+                            cancellationToken.Token.ThrowIfCancellationRequested();
+                            if (Interlocked.Exchange(ref lockObj, 1) == 0)
                             {
-                                running = false;
+                                VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
+                                int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
+                                if (currentAddress == area)
+                                {
+                                    running = false;
+                                    cancellationToken.Cancel();
+                                    return;
+                                }
+                                currentAddress = area;
+                                Interlocked.Exchange(ref lockObj, 0);
+                            }
+                            else
+                                continue;
+                            try
+                            {
+                                byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
+                                int index = FindPattern(buffer, signature, mask, search);
+                                if (index != -1)
+                                {
+                                    result = (int)mbi.BaseAddress + index;
+                                    running = false;
+                                    cancellationToken.Cancel();
+                                    return;
+                                }
+                            }
+                            catch (OverflowException)
+                            {
+                                result = -1;
                                 return;
                             }
-                            currentAddress = area;
-                            Interlocked.Exchange(ref lockObj, 0);
-                        }
-                        else
-                            continue;
-                        try
-                        {
-                            byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                            int index = FindPattern(buffer, signature, mask, search);
-                            if (index != -1)
-                            {
-                                result = (int)mbi.BaseAddress + index;
-                                running = false;
-                                return;
-                            }
-                        }
-                        catch (OverflowException)
-                        {
-                            result = -1;
-                            return;
-                        }
-                    } while (running);
+                        } while (running);
+                    }
+                    catch (System.OperationCanceledException)
+                    {
+                        Console.WriteLine("Finished getting address, cleaning up now.");
+                    }
                 });
             }
             while (running) {}
