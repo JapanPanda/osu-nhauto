@@ -63,7 +63,10 @@ namespace osu_nhauto {
                     }
                     if (currHitObject != null)
                     {
-                        //AutoPilot(currHitObject, currentTime, resConstants);
+                        if (currHitObject.Time - currentTime <= 50)
+                        {
+                            AutoPilot(currHitObject, currentTime, resConstants);
+                        }
                         if (currHitObject.Time - currentTime <= 0)
                         {
                             Relax(currHitObject, ref shouldPressSecondary, currentTime, ref relaxReleaseTime);

@@ -44,7 +44,7 @@ namespace osu_nhauto
             uint mbiSize = (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION));
 
             int lockObj = 0, result = -1;
-            bool running = true;
+            running = true;
             List<int> cache = new List<int>();
             for (int i = 0; i < 16; ++i)
             {
@@ -81,13 +81,13 @@ namespace osu_nhauto
                         catch (OverflowException)
                         {
                             result = -1;
-                            running = false;
+                            return;
                         }
                     } while (running);
                 });
             }
             while (running) {}
-            if (result != -1)
+            if (result != -1) 
                 return result;
             else
                 throw new Exception("Signature not found");
@@ -125,6 +125,8 @@ namespace osu_nhauto
             for (int i = -1, k; ++i < size; i += k)
             {
                 k = 0;
+                if (!running)
+                    break;
                 for (int j = 0; j < search.Length; ++j)
                 {
                     if (source[i + search[j]] != pattern[search[j]])
@@ -139,6 +141,7 @@ namespace osu_nhauto
         }
 
         public Process Process { get => process; }
+        public bool running;
     }
 
     [StructLayout(LayoutKind.Sequential)]
