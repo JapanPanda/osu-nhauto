@@ -100,15 +100,16 @@ namespace osu_nhauto {
                             cursorX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
                             cursorY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
                             Relax(currHitObject, ref shouldPressSecondary, currentTime, ref relaxReleaseTime);
+                            HitObject lastHitObject = currHitObject;
                             currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                            nextHitObject = nextHitObjIndex + 1 < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex + 1] : null;
+                            //nextHitObject = nextHitObjIndex + 1 < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex + 1] : null;
                             if (currHitObject != null)
                             {
-                                int newX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
-                                int newY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
-                                Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
-                                velX = (newX - cursorX) / (currHitObject.Time - currentTime);
-                                velY = (newY - cursorY) / (currHitObject.Time - currentTime);
+                                //int newX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
+                                //int newY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
+                                //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
+                                velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime) * 12.34f;
+                                velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime) * 12.34f;
                                 Console.WriteLine("New Vel: {0} x {1}", velX, velY);
                             }
                         }
@@ -172,39 +173,41 @@ namespace osu_nhauto {
             // TODO check if cursor is not on position and if true move cursor else do nothing
             GetCursorPos(out cursorPos);
             Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
-            if (cursorPos.X >= (currHitObject.X * resConstants[0] + resConstants[2]) - 10 && cursorPos.X <= (currHitObject.X * resConstants[0] + resConstants[2]) + 10)
+            float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
+            float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
+            if (xDiff == 0 || (velX > 0 && xDiff >= 0) || (velX < 0 && xDiff <= 0))
                 velX = 0;
 
-            if (cursorPos.Y >= (currHitObject.Y * resConstants[1] + resConstants[3]) - 20 && cursorPos.Y <= (currHitObject.Y * resConstants[1] + resConstants[3]) + 20)
+            if (yDiff == 0 || (velY > 0 && yDiff >= 0) || (velY < 0 && yDiff <= 0))
                 velY = 0;
 
-            if (velX >= 0)
+            missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
+            missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
+
+            /*
+            Console.WriteLine($"Vel({velX}, {velY})");
+            Console.WriteLine($"TruncVel({(velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX))}, {(velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY))}");
+            Console.WriteLine($"Missing({missingX}, {missingY})");
+            */
+            if (Math.Abs(missingX) >= 1)
             {
-                if (cursorPos.X >= (currHitObject.X * resConstants[0] + resConstants[2]))
-                    velX = 0;
+                int deltaX = missingX > 0 ? (int)Math.Floor(missingX) : (int)Math.Ceiling(missingX);
+                velX += deltaX;
+                missingX -= deltaX;
             }
 
-            if (velY >= 0)
+            if (Math.Abs(missingY) >= 1)
             {
-                if (cursorPos.Y >= (currHitObject.Y * resConstants[1] + resConstants[3]))
-                    velY = 0;
+                int deltaY = missingY > 0 ? (int)Math.Floor(missingY) : (int)Math.Ceiling(missingY);
+                velY += deltaY;
+                missingY -= deltaY;
             }
-
-            if (velX <= 0)
-            {
-                if (cursorPos.X <= (currHitObject.X * resConstants[0] + resConstants[2]))
-                    velX = 0;
-            }
-
-            if (velY <= 0)
-            {
-                if (cursorPos.Y <= (currHitObject.Y * resConstants[1] + resConstants[3]))
-                    velY = 0;
-            }
-
+            //Console.WriteLine($"NewMissing({missingX}, {missingY})");
             Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
             
         }
+
+        private float missingX, missingY;
 
         private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, int currentTime, ref int releaseTime)
         {
