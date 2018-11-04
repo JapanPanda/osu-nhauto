@@ -62,8 +62,9 @@ namespace osu_nhauto
                         else
                             continue;
 
-                        if (mbi.AllocationProtect == 0)
+                        if (mbi.AllocationProtect == 0 || (int)mbi.RegionSize <= 0)
                             continue;
+
                         try
                         {
                             byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);

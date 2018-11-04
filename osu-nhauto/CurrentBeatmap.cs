@@ -76,9 +76,9 @@ namespace osu_nhauto {
                         startParsing = 0;
 
                     if (line.StartsWith("CircleSize:"))
-                        circleSize = double.Parse(line.Split(':')[1]);
+                        CircleSize = double.Parse(line.Split(':')[1]);
                     else if (line.StartsWith("SliderMultiplier:"))
-                        sliderVelocity = double.Parse(line.Split(':')[1]);
+                        SliderVelocity = double.Parse(line.Split(':')[1]);
                     else if (line.Equals("[TimingPoints]"))
                         startParsing = 1;
                     else if (line.Equals("[HitObjects]"))
@@ -97,8 +97,8 @@ namespace osu_nhauto {
         public ReadOnlyCollection<TimingPoint> GetTimingPoints() => timingPoints;
         public ReadOnlyCollection<HitObject> GetHitObjects() => hitObjects;
 
-        public double circleSize { get; private set; }
-        public double sliderVelocity { get; private set; }
+        public double CircleSize { get; private set; }
+        public double SliderVelocity { get; private set; }
 
         private InterProcessOsu ipc;
         private string filePath = null;
