@@ -101,43 +101,22 @@ namespace osu_nhauto {
                             Relax(currHitObject, ref shouldPressSecondary, currentTime, ref relaxReleaseTime);
                             HitObject lastHitObject = currHitObject;
                             currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                            //nextHitObject = nextHitObjIndex + 1 < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex + 1] : null;
                             if (currHitObject != null)
                             {
-                                //int newX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
-                                //int newY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
                                 //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
                                 velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime);
                                 velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
-                                //velX = Math.Abs(currHitObject.X - lastHitObject.X) > 180 ? velX *= (float)9.4 : velX *= (float)8;
+                                Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
+                                {
+                                    if (Math.Abs(i) >= 250)
+                                        return 9.6f;
+                                    if (Math.Abs(i) >= 160)
+                                        return 8.8f;
+                                    return 8f;
+                                });
 
-                                //velY = Math.Abs(currHitObject.Y - lastHitObject.Y) > 140 ? velY *= (float)9.4 : velY *= (float)8;
-                                
-                                if (Math.Abs(currHitObject.X - lastHitObject.X) > 250)
-                                {
-                                    velX *= (float)9.8;
-                                }
-                                else if (Math.Abs(currHitObject.X - lastHitObject.X) > 180)
-                                {
-                                    velX *= (float)11.54;
-                                }
-                                else
-                                {
-                                    velX *= (float)8.5;
-                                }
-                                if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 250)
-                                {
-                                    velY *= (float)9.8;
-                                }
-                                else if (Math.Abs(currHitObject.Y - lastHitObject.Y) > 180)
-                                {
-                                    velY *= (float)11.54;
-                                }
-                                else
-                                {
-                                    velY *= (float)8.5;
-                                }
-                                
+                                velX *= applyVelocityFactor(currHitObject.X - lastHitObject.X);
+                                velY *= applyVelocityFactor(currHitObject.Y - lastHitObject.Y);
 
                                 Console.WriteLine("New Vel: {0} x {1}", velX, velY);
                             }
@@ -191,14 +170,29 @@ namespace osu_nhauto {
                 return;
 
             GetCursorPos(out cursorPos);
-            Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
+            //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
             float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
+            Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
+            {
+                if (Math.Abs(f) >= 40)
+                    return 2;
+                if (Math.Abs(f) >= 25)
+                    return 1.67f;
+                if (Math.Abs(f) >= 10)
+                    return 1.25f;
+                if (Math.Abs(f) >= 5)
+                    return 0.67f;
+                if (Math.Abs(f) >= 3)
+                    return 0.4f;
+
+                return 0;
+            });
             if (xDiff == 0 || (velX > 0 && xDiff >= 0) || (velX < 0 && xDiff <= 0))
-                velX = Math.Abs(xDiff) >= 3 ? -xDiff * 1.33f : 0;
+                velX = -xDiff * applyAutoCorrect(xDiff);
 
             if (yDiff == 0 || (velY > 0 && yDiff >= 0) || (velY < 0 && yDiff <= 0))
-                velY = Math.Abs(yDiff) >= 3 ? -yDiff * 1.33f : 0;
+                velY = -yDiff * applyAutoCorrect(yDiff);
 
             missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
             missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
