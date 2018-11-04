@@ -109,10 +109,10 @@ namespace osu_nhauto {
                                 Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
                                 {
                                     if (Math.Abs(i) >= 250)
-                                        return 9.6f;
+                                        return 11.8f;
                                     if (Math.Abs(i) >= 160)
-                                        return 8.8f;
-                                    return 8f;
+                                        return 9.6f;
+                                    return 8.2f;
                                 });
 
                                 velX *= applyVelocityFactor(currHitObject.X - lastHitObject.X);
@@ -125,7 +125,7 @@ namespace osu_nhauto {
                     else
                         return;
 
-                    Thread.Sleep(1);
+                    //Thread.Sleep(1);
                 }
                 else if (currentTime < lastTime)
                 {
@@ -176,15 +176,15 @@ namespace osu_nhauto {
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 if (Math.Abs(f) >= 40)
-                    return 2;
+                    return 3.7f;
                 if (Math.Abs(f) >= 25)
-                    return 1.67f;
+                    return 1.8f;
                 if (Math.Abs(f) >= 10)
-                    return 1.25f;
+                    return 0.5f;
                 if (Math.Abs(f) >= 5)
-                    return 0.67f;
+                    return 0.2f;
                 if (Math.Abs(f) >= 3)
-                    return 0.4f;
+                    return 0.05f;
 
                 return 0;
             });
