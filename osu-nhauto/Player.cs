@@ -59,7 +59,7 @@ namespace osu_nhauto {
             int nextTimingPtIndex = 0, nextHitObjIndex = 0;
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject currHitObject = beatmap.GetHitObjects()[0];
-            HitObject nextHitObject = beatmap.GetHitObjects()[1];
+            HitObject nextHitObject = beatmap.GetHitObjects().Count > 1 ? beatmap.GetHitObjects()[1] : null;
             msPerQuarter = beatmap.GetTimingPoints()[0].MsPerQuarter;
 
             bool shouldPressSecondary = false;
@@ -130,6 +130,11 @@ namespace osu_nhauto {
                 else if (currentTime < lastTime)
                 {
                     continueRunning = true;
+                    break;
+                }
+                else if (currentTime > lastTime + 500)
+                {
+                    continueRunning = false;
                     break;
                 }
             }
@@ -207,14 +212,34 @@ namespace osu_nhauto {
             }
         }
 
+        private void AutoPilotSpinner(ref float velX, ref float velY)
+        {
+            velX = (float)(10 * Math.Cos(cursorPos.X / 65535));
+            velY = (float)(10 * Math.Sin(cursorPos.Y / 65535));
+        }
+
+
         private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
         {
             if (currHitObject == null)
                 return;
 
             GetCursorPos(out cursorPos);
+            Console.WriteLine(currHitObject.Type);
             //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
-            AutoPilotCircle(currHitObject, resConstants, ref velX, ref velY);
+            switch (currHitObject.Type & (HitObjectType)0b1000_1011)
+            {
+                case HitObjectType.Normal:
+                    AutoPilotCircle(currHitObject, resConstants, ref velX, ref velY);
+                    break;
+                case HitObjectType.Slider:
+                    // Temporary until sliders are implemented
+                    AutoPilotCircle(currHitObject, resConstants, ref velX, ref velY);
+                    break;
+                case HitObjectType.Spinner:
+                    AutoPilotSpinner(ref velX, ref velY);
+                    break;
+            }
             Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);           
         }
 
