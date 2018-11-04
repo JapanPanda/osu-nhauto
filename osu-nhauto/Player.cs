@@ -113,7 +113,7 @@ namespace osu_nhauto {
                                         return 8.28f; // 8.2
                                 });
 
-                                    float dist = (float)Math.Sqrt(Math.Pow(currHitObject.X - lastHitObject.X, 2) + Math.Pow(currHitObject.Y - lastHitObject, 2));
+                                    float dist = (float)Math.Sqrt(Math.Pow(currHitObject.X - lastHitObject.X, 2) + Math.Pow(currHitObject.Y - lastHitObject.Y, 2));
                                     velX *= applyVelocityFactor((int)dist);
                                     velY *= applyVelocityFactor((int)dist);
                                     Console.WriteLine("Velocity({0}, {1})", velX, velY);
