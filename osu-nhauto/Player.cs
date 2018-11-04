@@ -152,7 +152,7 @@ namespace osu_nhauto {
             return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
-        private void AutoPilotCircle(HitObject currHitObject, float[] resConstants, ref float velX, ref float velY)
+        private void AutoPilotCircle(HitObject currHitObject, ref float velX, ref float velY)
         {
             if (currHitObject == null)
                 return;
@@ -208,12 +208,13 @@ namespace osu_nhauto {
 
         private void AutoPilotSpinner(ref float velX, ref float velY)
         {
+            POINT cursorPos = GetCursorPos();
             velX = (float)(10 * Math.Cos(cursorPos.X / 65535));
             velY = (float)(10 * Math.Sin(cursorPos.Y / 65535));
         }
 
 
-        private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
+        private void AutoPilot(HitObject currHitObject, int currentTime, float velX, float velY)
         {
             if (currHitObject == null)
                 return;
@@ -223,11 +224,11 @@ namespace osu_nhauto {
             switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
                 case HitObjectType.Normal:
-                    AutoPilotCircle(currHitObject, resConstants, ref velX, ref velY);
+                    AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Slider:
                     // Temporary until sliders are implemented
-                    AutoPilotCircle(currHitObject, resConstants, ref velX, ref velY);
+                    AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Spinner:
                     AutoPilotSpinner(ref velX, ref velY);
