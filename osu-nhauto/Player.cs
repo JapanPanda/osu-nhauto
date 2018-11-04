@@ -81,29 +81,45 @@ namespace osu_nhauto {
                             cursorX = (int)(currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920;
                             cursorY = (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080;
                             Relax(currHitObject, ref shouldPressSecondary, currentTime);
-                            HitObject lastHitObject = currHitObject;
-                            currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                            if (currHitObject != null)
+                            if (isSpinner)
                             {
-                                //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
-                                velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime);
-                                velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
-                                Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
+                                HitObjectSpinner spinner = currHitObject as HitObjectSpinner;
+                                if (spinner != null)
                                 {
+                                    isSpinner = currentTime > spinner.EndTime ? false : true;
+                                }
+                                else
+                                {
+                                    isSpinner = false;
+                                }
+                            }
+                            if (!isSpinner)
+                            {
+                                HitObject lastHitObject = currHitObject;
+                                POINT cursorPos = GetCursorPos();
+                                currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
+                                if (currHitObject != null)
+                                {
+                                    //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
+                                    velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime);
+                                    velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
+                                    Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
+                                    {
                                     /*
                                     if (Math.Abs(i) >= 250)
                                         return 10.4f; // 11.8
                                     if (Math.Abs(i) >= 160)
                                         return 9.6f; */
-                                    return 8.28f; // 8.2
+                                        return 8.28f; // 8.2
                                 });
 
-                                float dist = (float)Math.Sqrt(Math.Pow(currHitObject.X - lastHitObject.X, 2) + Math.Pow(currHitObject.Y - lastHitObject.Y, 2));
-                                velX *= applyVelocityFactor((int)dist);
-                                velY *= applyVelocityFactor((int)dist);
-                                Console.WriteLine("Velocity({0}, {1})", velX, velY);
+                                    float dist = (float)Math.Sqrt(Math.Pow(currHitObject.X - lastHitObject.X, 2) + Math.Pow(currHitObject.Y - lastHitObject, 2));
+                                    velX *= applyVelocityFactor((int)dist);
+                                    velY *= applyVelocityFactor((int)dist);
+                                    Console.WriteLine("Velocity({0}, {1})", velX, velY);
+                                }
                             }
-                        }
+                    }
                     }
                     else
                         return;
@@ -113,11 +129,6 @@ namespace osu_nhauto {
                 else if (currentTime < lastTime)
                 {
                     continueRunning = true;
-                    break;
-                }
-                else if (currentTime > lastTime + 500)
-                {
-                    continueRunning = false;
                     break;
                 }
             }
@@ -204,23 +215,32 @@ namespace osu_nhauto {
                 velY += deltaY;
                 missingY -= deltaY;
             }
+
+            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
         }
+
+        double EclipseAngle = 0;
 
         private void AutoPilotSpinner(ref float velX, ref float velY)
         {
+            Console.WriteLine("spinner detected");
+            double increment = Math.PI / 8;
             POINT cursorPos = GetCursorPos();
-            velX = (float)(10 * Math.Cos(cursorPos.X / 65535));
-            velY = (float)(10 * Math.Sin(cursorPos.Y / 65535));
+            float x = (960 + (float)(100 * Math.Cos(EclipseAngle))) * 65535 / 1920;
+            float y = (530 + (float)(100 * Math.Sin(EclipseAngle))) * 65535 / 1080;
+            EclipseAngle += increment;
+            Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
 
+        bool isSpinner = false;
 
         private void AutoPilot(HitObject currHitObject, int currentTime, float velX, float velY)
         {
             if (currHitObject == null)
                 return;
-
-            POINT cursorPos = GetCursorPos();
+            
             //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
+
             switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
                 case HitObjectType.Normal:
@@ -231,10 +251,14 @@ namespace osu_nhauto {
                     AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Spinner:
-                    AutoPilotSpinner(ref velX, ref velY);
+                    isSpinner = true;
+                    HitObjectSpinner spinnerObject = currHitObject as HitObjectSpinner;
+                    if (currentTime >= spinnerObject.Time)
+                    {
+                        AutoPilotSpinner(ref velX, ref velY);
+                    }
                     break;
-            }
-            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);           
+            }        
         }
 
         private float missingX, missingY;
