@@ -32,7 +32,7 @@ namespace osu_nhauto
             Process[] processes = Process.GetProcessesByName("osu!");
             osuProcess = processes.Length > 0 ? processes[0] : null;
 
-            if (osuProcess != null)
+            if (osuProcess != null && !osuProcess.HasExited)
             {
                 System.Console.WriteLine("Found process");
                 GetResolution();
