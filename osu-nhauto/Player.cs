@@ -201,7 +201,7 @@ namespace osu_nhauto {
             }
         }
 
-        private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
+        private void AutoPilot(HitObject currHitObject, int currentTime, float velX, float velY)
         {
             if (currHitObject == null)
                 return;
