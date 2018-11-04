@@ -86,16 +86,22 @@ namespace osu_nhauto {
                             if (currHitObject != null)
                             {
                                 //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
-                                velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime);
-                                velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
+                                velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime) * resConstants[0];
+                                velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime) * resConstants[1];
                                 Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
                                 {
                                     /*
                                     if (Math.Abs(i) >= 250)
-                                        return 10.4f; // 11.8
+                                        return 11.8f; // 11.8
                                     if (Math.Abs(i) >= 160)
-                                        return 9.6f; */
-                                    return 8.28f; // 8.2
+                                        return 9.6f;
+                                    return 8.2f; // 8.2
+                                    */
+                                    if (Math.Abs(i) >= 250)
+                                        return 8.28f; // 11.8
+                                    if (Math.Abs(i) >= 160)
+                                        return 7.18f;
+                                    return 6.08f; // 8.2
                                 });
 
                                 float dist = (float)Math.Sqrt(Math.Pow(currHitObject.X - lastHitObject.X, 2) + Math.Pow(currHitObject.Y - lastHitObject.Y, 2));
@@ -108,7 +114,7 @@ namespace osu_nhauto {
                     else
                         return;
 
-                    Thread.Sleep(1);
+                    //Thread.Sleep(1);
                 }
                 else if (currentTime < lastTime)
                 {
@@ -149,6 +155,7 @@ namespace osu_nhauto {
             float ratioX = playfieldX / 512;
             float ratioY = playfieldY / 384;
 
+            Console.WriteLine($"CALCULATED RATIOS: {ratioX} x {ratioY}");
             return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
@@ -165,28 +172,24 @@ namespace osu_nhauto {
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 float dist = Math.Abs(f) - circlePxSize + 11;
-                if (dist >= 40)
+                if (Math.Abs(dist) >= 40)
                     return 3.7f;
-                if (dist >= 30)
-                    return 2.1f;
-                if (dist >= 25)
+                if (Math.Abs(dist) >= 25)
                     return 1.8f;
-                if (dist >= 15)
-                    return 0.9f;
-                if (dist >= 10)
-                    return 0.5f;
-                if (dist >= 5)
-                    return 0.2f;
-                if (dist >= 3)
+                if (Math.Abs(dist) >= 10)
+                    return 0.45f;
+                if (Math.Abs(dist) >= 5)
+                    return 0.18f;
+                if (Math.Abs(dist) >= 3)
                     return 0.05f;
 
                 return 0;
             });
             if (xDiff == 0 || (velX > 0 && xDiff >= 0) || (velX < 0 && xDiff <= 0))
-                velX = -xDiff * applyAutoCorrect(xDiff) * 1.08f;
+                velX = -xDiff * applyAutoCorrect(xDiff) * 1.075f * (float)Math.Pow(resConstants[0], 0.825);
 
             if (yDiff == 0 || (velY > 0 && yDiff >= 0) || (velY < 0 && yDiff <= 0))
-                velY = -yDiff * applyAutoCorrect(yDiff);
+                velY = -yDiff * applyAutoCorrect(yDiff) * (float)Math.Pow(resConstants[1], 0.825);
 
             missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
             missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
