@@ -122,7 +122,8 @@ namespace osu_nhauto {
                 MainWindow.osu.ObtainAddresses();
                 state = MainWindow.osu.IsAddressesLoaded() == false ? GameState.Loading : GameState.Idle;
             }
-            else if (MainWindow.osu.GetWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1)
+            else if (MainWindow.osu.GetWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1 &&
+                !MainWindow.osu.GetWindowTitle().EndsWith(".osu") && MainWindow.osu.GetWindowTitle().StartsWith("osu!"))
             {
                 state = GameState.Playing;
             }
