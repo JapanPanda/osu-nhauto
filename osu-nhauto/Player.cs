@@ -11,10 +11,6 @@ namespace osu_nhauto {
 
     public class Player
     {
-        [DllImport("user32.dll", EntryPoint = "SetCursorPos")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetCursorPos(int X, int Y);
-
         [DllImport("user32.dll", EntryPoint = "mouse_event", CallingConvention = CallingConvention.Winapi)]
         internal static extern void Mouse_Event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
@@ -45,16 +41,6 @@ namespace osu_nhauto {
 
         public void Update()
         {
-            //Mods timeMod = osuClient.GetTimeMod();
-
-            //if (this.autopilotRunning) 
-            /*
-                Task.Run(() => {
-                    AutoPilot();
-                });
-                */
-            //new Thread(AutoPilot).Start();
-
             bool continueRunning = false;
             int nextTimingPtIndex = 0, nextHitObjIndex = 0;
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
@@ -64,10 +50,8 @@ namespace osu_nhauto {
 
             bool shouldPressSecondary = false;
             int lastTime = osuClient.GetAudioTime();
-            float velX = -1;
-            float velY = -1;
-            int relaxReleaseTime = int.MaxValue;
-            float[] resConstants = CalculatePlayfieldResolution();
+            float velX = 0, velY = 0;
+            resConstants = CalculatePlayfieldResolution();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime() + 4;
@@ -84,21 +68,19 @@ namespace osu_nhauto {
                     {
                         if (nextHitObjIndex == 0)
                         {
-                            int newX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
-                            int newY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
-                            Mouse_Event(0x1 | 0x8000, newX, newY, 0, 0);
-                            cursorX = newX;
-                            cursorY = newY;
+                            cursorX = (int)(currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920;
+                            cursorY = (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080;
+                            Mouse_Event(0x1 | 0x8000, cursorX, cursorY, 0, 0);
                         }
                         else
                         {
-                            AutoPilot(currHitObject, currentTime, resConstants, velX, velY);
+                            AutoPilot(currHitObject, currentTime, velX, velY);
                         }
                         if (currHitObject.Time - currentTime <= 0)
                         {
-                            cursorX = (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920);
-                            cursorY = (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080);
-                            Relax(currHitObject, ref shouldPressSecondary, currentTime, ref relaxReleaseTime);
+                            cursorX = (int)(currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920;
+                            cursorY = (int)(currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080;
+                            Relax(currHitObject, ref shouldPressSecondary, currentTime);
                             HitObject lastHitObject = currHitObject;
                             currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
                             if (currHitObject != null)
@@ -108,24 +90,25 @@ namespace osu_nhauto {
                                 velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
                                 Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
                                 {
+                                    /*
                                     if (Math.Abs(i) >= 250)
-                                        return 11.8f;
+                                        return 10.4f; // 11.8
                                     if (Math.Abs(i) >= 160)
-                                        return 9.6f;
-                                    return 8.2f;
+                                        return 9.6f; */
+                                    return 8.28f; // 8.2
                                 });
 
-                                velX *= applyVelocityFactor(currHitObject.X - lastHitObject.X);
-                                velY *= applyVelocityFactor(currHitObject.Y - lastHitObject.Y);
-
-                                Console.WriteLine("New Vel: {0} x {1}", velX, velY);
+                                float dist = (float)Math.Sqrt(Math.Pow(currHitObject.X - lastHitObject.X, 2) + Math.Pow(currHitObject.Y - lastHitObject.Y, 2));
+                                velX *= applyVelocityFactor((int)dist);
+                                velY *= applyVelocityFactor((int)dist);
+                                Console.WriteLine("Velocity({0}, {1})", velX, velY);
                             }
                         }
                     }
                     else
                         return;
 
-                    //Thread.Sleep(1);
+                    Thread.Sleep(1);
                 }
                 else if (currentTime < lastTime)
                 {
@@ -164,32 +147,38 @@ namespace osu_nhauto {
             return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
-        private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
+        private void AutoPilot(HitObject currHitObject, int currentTime, float velX, float velY)
         {
             if (currHitObject == null)
                 return;
 
-            GetCursorPos(out cursorPos);
+            POINT cursorPos = GetCursorPos();
             //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
             float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
+            float circlePxSize = (float)(54.4 - 4.48 * beatmap.CircleSize);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
-                if (Math.Abs(f) >= 40)
+                float dist = Math.Abs(f) - circlePxSize + 11;
+                if (dist >= 40)
                     return 3.7f;
-                if (Math.Abs(f) >= 25)
+                if (dist >= 30)
+                    return 2.1f;
+                if (dist >= 25)
                     return 1.8f;
-                if (Math.Abs(f) >= 10)
+                if (dist >= 15)
+                    return 0.9f;
+                if (dist >= 10)
                     return 0.5f;
-                if (Math.Abs(f) >= 5)
+                if (dist >= 5)
                     return 0.2f;
-                if (Math.Abs(f) >= 3)
+                if (dist >= 3)
                     return 0.05f;
 
                 return 0;
             });
             if (xDiff == 0 || (velX > 0 && xDiff >= 0) || (velX < 0 && xDiff <= 0))
-                velX = -xDiff * applyAutoCorrect(xDiff);
+                velX = -xDiff * applyAutoCorrect(xDiff) * 1.08f;
 
             if (yDiff == 0 || (velY > 0 && yDiff >= 0) || (velY < 0 && yDiff <= 0))
                 velY = -yDiff * applyAutoCorrect(yDiff);
@@ -215,10 +204,12 @@ namespace osu_nhauto {
 
         private float missingX, missingY;
 
-        private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, int currentTime, ref int releaseTime)
+        private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, int currentTime)
         {
+            //IsCursorHoveringOverObject(currHitObject);
             shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
+            Thread.Sleep(2);
             int delay = 16;
             switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
@@ -239,7 +230,7 @@ namespace osu_nhauto {
         }
 
         private int CalculateSliderDuration(HitObjectSlider obj) =>
-            (int)Math.Ceiling(obj.Length * obj.RepeatCount / (100 * beatmap.sliderVelocity * this.speedVelocity / this.msPerQuarter));
+            (int)Math.Ceiling(obj.Length * obj.RepeatCount / (100 * beatmap.SliderVelocity * this.speedVelocity / this.msPerQuarter));
 
         private TimingPoint GetNextTimingPoint(ref int index)
         {
@@ -290,6 +281,21 @@ namespace osu_nhauto {
             return beatmap.GetHitObjects()[index + 1].Time - currEndTime;
         }
 
+        private bool IsCursorHoveringOverObject(HitObject hitObj)
+        {
+            POINT cursor = GetCursorPos();
+            double dist = Math.Sqrt(Math.Pow(cursor.X - (hitObj.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursor.Y - (hitObj.Y * resConstants[1] + resConstants[3]), 2));
+            float circlePxSize = 54.4f - 4.48f * (float)beatmap.CircleSize;
+            //Console.WriteLine($"Dist={dist}, Hovering={dist <= circlePxSize - 4}");
+            return dist <= 54.4f - 4.48f * (float)beatmap.CircleSize;
+        }
+
+        private POINT GetCursorPos()
+        {
+            GetCursorPos(out POINT cursor);
+            return cursor;
+        }
+
         private Osu osuClient;
 
         public void ToggleAutoPilot() => autopilotRunning = !autopilotRunning;
@@ -312,9 +318,9 @@ namespace osu_nhauto {
         private double msPerQuarter = 1000;
         private double speedVelocity = 1;
         private double[] nextTimings = new double[2];
+        private float[] resConstants;
         private InputSimulator inputSimulator = new InputSimulator();
         private CurrentBeatmap beatmap;
-        private POINT cursorPos;
         private int cursorX = -1;
         private int cursorY = -1;
     }
