@@ -146,15 +146,22 @@ namespace osu_nhauto
                                 if (currHitObject != null)
                                 {
                                     //Console.WriteLine("{0} : {1}, {2} x {3}", newY, cursorY, currHitObject.Time, currentTime);
-                                    velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime);
-                                    velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime);
+                                    velX = (float)(currHitObject.X - lastHitObject.X) / (currHitObject.Time - currentTime) * resConstants[0];
+                                    velY = (float)(currHitObject.Y - lastHitObject.Y) / (currHitObject.Time - currentTime) * resConstants[1];
                                     Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
                                     {
+                                        /*
                                         if (Math.Abs(i) >= 250)
-                                            return 11.8f;
+                                            return 11.8f; // 11.8
                                         if (Math.Abs(i) >= 160)
                                             return 9.6f;
-                                        return 8.2f;
+                                        return 8.2f; // 8.2
+                                        */
+                                        if (Math.Abs(i) >= 250)
+                                            return 8.28f; // 11.8
+                                        if (Math.Abs(i) >= 160)
+                                            return 7.18f;
+                                        return 6.08f; // 8.2
                                     });
 
                                     velX *= applyVelocityFactor(currHitObject.X - lastHitObject.X);
@@ -217,6 +224,7 @@ namespace osu_nhauto
             //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
             float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
+            float circlePxSize = (float)(54.4 - 4.48 * beatmap.CircleSize);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 float dist = Math.Abs(f) - circlePxSize + 11;
