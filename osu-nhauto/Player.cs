@@ -164,13 +164,8 @@ namespace osu_nhauto {
             return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
-        private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
+        private void AutoPilotCircle(HitObject currHitObject, float[] resConstants, ref float velX, ref float velY)
         {
-            if (currHitObject == null)
-                return;
-
-            GetCursorPos(out cursorPos);
-            //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
             float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
@@ -210,6 +205,16 @@ namespace osu_nhauto {
                 velY += deltaY;
                 missingY -= deltaY;
             }
+        }
+
+        private void AutoPilot(HitObject currHitObject, int currentTime, float[] resConstants, float velX, float velY)
+        {
+            if (currHitObject == null)
+                return;
+
+            GetCursorPos(out cursorPos);
+            //Console.WriteLine("{0} x {1} : {2} x {3}", cursorPos.X, cursorPos.Y, currHitObject.X * resConstants[0] + resConstants[2], (currHitObject.Y * resConstants[1] + resConstants[3]));
+            AutoPilotCircle(currHitObject, resConstants, ref velX, ref velY);
             Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);           
         }
 
