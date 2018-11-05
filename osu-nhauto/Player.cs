@@ -126,7 +126,7 @@ namespace osu_nhauto
                             if (osuClient.IsAudioPlaying() == 0)
                             {
                                 continueRunning = true;
-                                Thread.Sleep(1000);
+                                Thread.Sleep(1500);
                                 break;
                             }
                         }
@@ -298,7 +298,11 @@ namespace osu_nhauto
                     AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Spinner:
-                    AutoPilotSpinner(ref velX, ref velY);
+                    if (currentTime > currHitObject.Time)
+                    {
+                        isSpinner = true;
+                        AutoPilotSpinner(ref velX, ref velY);
+                    }
                     break;
             }
         }
@@ -398,6 +402,7 @@ namespace osu_nhauto
         private POINT cursorPos;
         private float missingX, missingY;
         private float[] resConstants;
+        private bool isSpinner = false;
         private POINT center;
         private KeyPressed keyPressed = KeyPressed.None;
     }
