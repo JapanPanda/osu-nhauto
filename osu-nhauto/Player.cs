@@ -78,7 +78,7 @@ namespace osu_nhauto
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime() + 4;
-                if (currentTime > lastTime)
+                if (currentTime > lastTime && osuClient.IsAudioPlaying() == 1)
                 {
                     lastTime = currentTime;
                     if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
@@ -176,6 +176,12 @@ namespace osu_nhauto
                                     Console.WriteLine("New Vel: {0} x {1}", velX, velY);
                                 }
                             }
+                            if (osuClient.IsAudioPlaying() == 0)
+                            {
+                                continueRunning = true;
+                                Thread.Sleep(1000);
+                                break;
+                            }
                         }
                     }
                     else
@@ -187,6 +193,18 @@ namespace osu_nhauto
                 {
                     continueRunning = true;
                     break;
+                }
+                else if (osuClient.IsAudioPlaying() == 0)
+                {
+                    if (keyPressed == KeyPressed.Key1)
+                    {
+                        inputSimulator.Keyboard.KeyUp(keyCode1);
+                    }
+                    else if (keyPressed == KeyPressed.Key2)
+                        inputSimulator.Keyboard.KeyUp(keyCode2);
+                    else
+                        continue;
+                    keyPressed = KeyPressed.None;
                 }
             }
 
@@ -237,10 +255,8 @@ namespace osu_nhauto
         {
             float circlePxSize = 5;
             float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]), 2));
-            Console.WriteLine("DIST: {0} | CIRCLESIZE: {1}", dist, circlePxSize);
             if (dist < circlePxSize)
             {
-                Console.WriteLine("true");
                 return true;
             }
             return false;
@@ -259,15 +275,15 @@ namespace osu_nhauto
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 float dist = Math.Abs(f) - circlePxSize + 11;
-                if (Math.Abs(dist) >= 40)
+                if (dist >= 40)
                     return 3.7f;
-                if (Math.Abs(dist) >= 25)
+                if (dist >= 25)
                     return 1.8f;
-                if (Math.Abs(dist) >= 10)
+                if (dist >= 10)
                     return 0.45f;
-                if (Math.Abs(dist) >= 5)
+                if (dist >= 5)
                     return 0.18f;
-                if (Math.Abs(dist) >= 3)
+                if (dist >= 3)
                     return 0.05f;
 
                 return 0;
@@ -306,8 +322,7 @@ namespace osu_nhauto
             float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - center.X, 2) + Math.Pow(cursorPos.Y - center.Y, 2));
             
             if (dist > 100)
-            {
-                
+            { 
                 float x = (center.X - cursorPos.X) / 15f;
                 float y = (center.Y - cursorPos.Y) / 15f;
                 Mouse_Event(0x1, (int)x, (int)y, 0, 0);
@@ -368,7 +383,6 @@ namespace osu_nhauto
                 default:
                     break;
             }
-
             bool pressedSecondary = shouldPressSecondary;
             Task.Delay(delay).ContinueWith(ant => { keyPressed = KeyPressed.None; inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1); });
         }

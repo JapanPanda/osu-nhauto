@@ -109,6 +109,7 @@ namespace osu_nhauto
         }
 
         public int GetAudioTime() => memory.ReadInt32(audioTime);
+        public int IsAudioPlaying() => memory.ReadInt32(audioPlaying);
         public bool IsAddressesLoaded() => this.loadedAddresses;
         public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
         public Process GetProcess() => this.osuProcess;
