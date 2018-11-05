@@ -98,7 +98,7 @@ namespace osu_nhauto
                             if (currHitObject != null && currHitObject != lastHitObject)
                             {
                                 float xDiff, yDiff;
-                                if ((currHitObject.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
+                                if ((lastHitObject.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
                                 {
                                     xDiff = currHitObject.X * resConstants[0] + resConstants[2] - cursorPos.X;
                                     yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
