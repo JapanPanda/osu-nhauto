@@ -36,6 +36,11 @@ namespace osu_nhauto
             }
         }
 
+        private enum KeyPressed
+        {
+            None, Key1, Key2
+        }
+
 
         public Player(Osu osu)
         {
@@ -69,6 +74,7 @@ namespace osu_nhauto
             float velY = -1;
             int relaxReleaseTime = int.MaxValue;
             resConstants = CalculatePlayfieldResolution();
+            center = CalculateCenter();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 int currentTime = osuClient.GetAudioTime() + 4;
@@ -125,10 +131,10 @@ namespace osu_nhauto
                                         Func<int, float> applyVelocityFactor = new Func<int, float>(i =>
                                         {
                                             if (Math.Abs(i) >= 250)
-                                                return 11.8f;
+                                                return 8.28f; // 11.8
                                             if (Math.Abs(i) >= 160)
-                                                return 9.6f;
-                                            return 8.2f;
+                                                return 7.18f;
+                                            return 6.08f; // 8.2
                                         });
 
                                         velX *= applyVelocityFactor(currHitObject.X - cursorPos.X / 65535 * 1920);
@@ -215,6 +221,18 @@ namespace osu_nhauto
             return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
+        private POINT CalculateCenter()
+        {
+            Osu.RECT resolution = this.osuClient.GetResolution();
+            POINT center;
+            float xOffset = (int)((resolution.Right - resolution.Left) / 2);
+            float yOffset = (int)((resolution.Bottom - resolution.Top) / 2);
+            center.X = (int)(resolution.Left + xOffset);
+            center.Y = (int)(resolution.Top + yOffset + 29);
+            Console.WriteLine("CALCULATED CENTER: {0} x {1}", center.X, center.Y);
+            return center;
+        }
+
         private void AutoPilotCircle(HitObject currHitObject, ref float velX, ref float velY)
         {
             if (currHitObject == null)
@@ -268,14 +286,30 @@ namespace osu_nhauto
 
         private double EclipseAngle = 0;
 
+        double increment = Math.PI / 14;
         private void AutoPilotSpinner(ref float velX, ref float velY)
         {
-            double increment = Math.PI / 15;
             GetCursorPos(out cursorPos);
-            float x = (960 + (float)(100 * Math.Cos(EclipseAngle))) * 65535 / 1920;
-            float y = (550 + (float)(100 * Math.Sin(EclipseAngle))) * 65535 / 1080;
-            EclipseAngle += increment;
-            Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
+            float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - center.X, 2) + Math.Pow(cursorPos.Y - center.Y, 2));
+            
+            if (dist > 100)
+            {
+                
+                float x = (center.X - cursorPos.X) / 15f;
+                float y = (center.Y - cursorPos.Y) / 15f;
+                Mouse_Event(0x1, (int)x, (int)y, 0, 0);
+                if (Math.Floor(dist) <= 101)
+                {
+                    EclipseAngle = Math.Atan2((float)(cursorPos.Y - center.Y), (float)(cursorPos.X - center.X));
+                }
+            }
+            else
+            {
+                float x = (center.X + (float)(98 * Math.Cos(EclipseAngle))) * 65535 / 1920;
+                float y = (center.Y + (float)(98 * Math.Sin(EclipseAngle))) * 65535 / 1080;
+                EclipseAngle += increment;
+                Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
+            }
         }
 
         private bool isSpinner = false;
@@ -304,7 +338,9 @@ namespace osu_nhauto
         private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, int currentTime, ref int releaseTime)
         {
             shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
+            Thread.Sleep(2);
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
+            keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             int delay = 16;
             switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
@@ -321,7 +357,7 @@ namespace osu_nhauto
             }
 
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay(delay).ContinueWith(ant => inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1));
+            Task.Delay(delay).ContinueWith(ant => { keyPressed = KeyPressed.None; inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1); });
         }
 
         private int CalculateSliderDuration(HitObjectSlider obj) =>
@@ -402,6 +438,8 @@ namespace osu_nhauto
         private CurrentBeatmap beatmap;
         private POINT cursorPos;
         private float[] resConstants;
+        private POINT center;
+        private KeyPressed keyPressed = KeyPressed.None;
         private int cursorX = -1;
         private int cursorY = -1;
     }
