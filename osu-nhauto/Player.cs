@@ -233,9 +233,22 @@ namespace osu_nhauto
             return center;
         }
 
+        private bool IsCursorOnCircle(HitObject currHitObject)
+        {
+            float circlePxSize = 5;
+            float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]), 2));
+            Console.WriteLine("DIST: {0} | CIRCLESIZE: {1}", dist, circlePxSize);
+            if (dist < circlePxSize)
+            {
+                Console.WriteLine("true");
+                return true;
+            }
+            return false;
+        }
+
         private void AutoPilotCircle(HitObject currHitObject, ref float velX, ref float velY)
         {
-            if (currHitObject == null)
+            if (currHitObject == null || IsCursorOnCircle(currHitObject))
                 return;
 
             GetCursorPos(out cursorPos);
@@ -306,7 +319,7 @@ namespace osu_nhauto
             else
             {
                 float x = (center.X + (float)(98 * Math.Cos(EclipseAngle))) * 65535 / 1920;
-                float y = (center.Y + (float)(98 * Math.Sin(EclipseAngle))) * 65535 / 1080;
+                float y = (center.Y+ (float)(98 * Math.Sin(EclipseAngle))) * 65535 / 1080;
                 EclipseAngle += increment;
                 Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
             }
