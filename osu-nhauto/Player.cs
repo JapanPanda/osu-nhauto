@@ -79,7 +79,7 @@ namespace osu_nhauto
                     }
                     if (currHitObject != null)
                     {
-                        if (nextHitObjIndex == 0 && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
+                        if (nextHitObjIndex == 0)
                             Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920), (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080), 0, 0);
                         else
                             AutoPilot(currHitObject, currentTime, velX, velY);
@@ -244,14 +244,26 @@ namespace osu_nhauto
             Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
         }
 
-        private double EclipseAngle = 0;
-
-        double increment = Math.PI / 14;
+        private double ellipseAngle = 0;
+        private const double increment = Math.PI / 14;
         private void AutoPilotSpinner(ref float velX, ref float velY)
         {
             GetCursorPos(out cursorPos);
             float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - center.X, 2) + Math.Pow(cursorPos.Y - center.Y, 2));
-            
+            if (ellipseAngle == -1)
+                ellipseAngle = Math.Atan2(cursorPos.Y - center.Y, cursorPos.X - center.X);
+            else
+                ellipseAngle += increment;
+
+            float x = (center.X + (float)(dist * Math.Cos(ellipseAngle))) * 65535 / 1920;
+            float y = (center.Y + (float)(dist * Math.Sin(ellipseAngle))) * 65535 / 1080;
+            if (dist >= 100)
+            {
+                x -= (float)(50 * Math.Cos(ellipseAngle));
+                y -= (float)(50 * Math.Sin(ellipseAngle));
+            }
+            Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
+            /*
             if (dist > 100)
             {
                 
@@ -270,6 +282,7 @@ namespace osu_nhauto
                 EclipseAngle += increment;
                 Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
             }
+            */
         }
 
         private void AutoPilot(HitObject currHitObject, int currentTime, float velX, float velY)
@@ -283,7 +296,8 @@ namespace osu_nhauto
                     AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Spinner:
-                    AutoPilotSpinner(ref velX, ref velY);
+                    if (currentTime >= currHitObject.Time - 50)
+                        AutoPilotSpinner(ref velX, ref velY);
                     break;
             }
         }
@@ -291,9 +305,8 @@ namespace osu_nhauto
         private void Relax(HitObject currHitObject, int currentTime, ref bool shouldPressSecondary)
         {
             shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
-            Thread.Sleep(2);
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
-            //Thread.Sleep(2);
+            Thread.Sleep(2);
             int offset = Math.Max(0, GetHitObjectEndTime(currHitObject) - currHitObject.Time);
             bool pressedSecondary = shouldPressSecondary;
             Task.Delay(offset + 16).ContinueWith(ant => inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1));
