@@ -79,7 +79,7 @@ namespace osu_nhauto
                     }
                     if (currHitObject != null)
                     {
-                        if (nextHitObjIndex == 0)
+                        if (nextHitObjIndex == 0 && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
                             Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920), (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080), 0, 0);
                         else
                             AutoPilot(currHitObject, currentTime, velX, velY);
@@ -164,7 +164,7 @@ namespace osu_nhauto
 
             float totalOffsetX = resolution.Left + playfieldOffsetX;
             float totalOffsetY = resolution.Top + playfieldOffsetY;
-            return new float[6] { ratioX, ratioY, totalOffsetX, totalOffsetY, totalOffsetX + 0.5f * playfieldX, totalOffsetY + 0.5f * playfieldY };
+            return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
         }
 
         private POINT CalculateCenter()
@@ -385,7 +385,5 @@ namespace osu_nhauto
         private float[] resConstants;
         private POINT center;
         private KeyPressed keyPressed = KeyPressed.None;
-        private int cursorX = -1;
-        private int cursorY = -1;
     }
 }
