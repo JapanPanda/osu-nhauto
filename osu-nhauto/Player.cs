@@ -48,7 +48,7 @@ namespace osu_nhauto
             keyCode2 = (WindowsInput.Native.VirtualKeyCode)key2;
             osuClient = osu;
         }
-        
+
 
         public void Update()
         {
@@ -70,6 +70,7 @@ namespace osu_nhauto
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 currentTime = osuClient.GetAudioTime() + 6;
+                Console.WriteLine(MainWindow.statusHandler.GetGameState());
                 if (currentTime > lastTime)
                 {
                     lastTime = currentTime;
@@ -85,9 +86,7 @@ namespace osu_nhauto
                             (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Slider)
                             Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920), (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080), 0, 0);
                         else
-                        {
                             AutoPilot(currHitObject, currentTime, velX, velY);
-                        }
 
                         if (currHitObject.Time - currentTime <= 0)
                         {
@@ -101,10 +100,11 @@ namespace osu_nhauto
                             {
                                 currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
 
-                            if (currHitObject != null)
-                            {
-                                GetVelocities(currHitObject, lastHitObject, ref velX, ref velY);
-                                //Console.WriteLine("New Vel: {0} x {1}", velX, velY);
+                                if (currHitObject != null)
+                                {
+                                    GetVelocities(currHitObject, lastHitObject, ref velX, ref velY);
+                                    //Console.WriteLine("New Vel: {0} x {1}", velX, velY);
+                                }
                             }
                             /*
                             if (osuClient.IsAudioPlaying() == 0)
@@ -121,7 +121,7 @@ namespace osu_nhauto
 
                     Thread.Sleep(1);
                 }
-                else if (currentTime + 200 < lastTime)
+                else if (currentTime < lastTime)
                 {
                     continueRunning = true;
                     break;
@@ -198,7 +198,6 @@ namespace osu_nhauto
         private POINT CalculateCenter()
         {
             Osu.RECT resolution = this.osuClient.GetResolution();
-            POINT center;
             float xOffset = (resolution.Right - resolution.Left) / 2f;
             float yOffset = (resolution.Bottom - resolution.Top) / 2f;
             center.X = (int)(resolution.Left + xOffset);
@@ -450,7 +449,6 @@ namespace osu_nhauto
         private float circlePxSize;
         private float[] resConstants;
         private int currentTime;
-        private POINT center;
         private KeyPressed keyPressed = KeyPressed.None;
 
         private const double ANGLE_INCREMENT = Math.PI / 18;
