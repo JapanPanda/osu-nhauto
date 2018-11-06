@@ -70,7 +70,6 @@ namespace osu_nhauto
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 currentTime = osuClient.GetAudioTime() + 6;
-                Console.WriteLine(MainWindow.statusHandler.GetGameState());
                 if (currentTime > lastTime)
                 {
                     lastTime = currentTime;
