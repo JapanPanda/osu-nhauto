@@ -82,17 +82,16 @@ namespace osu_nhauto
                     }
                     if (currHitObject != null)
                     {
-                        if (nextHitObjIndex == 0 && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner &&
-                            (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Slider)
+                        if (nextHitObjIndex == 0 && currentTime < currHitObject.Time && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
                             Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920), (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080), 0, 0);
                         else
-                            AutoPilot(currHitObject, currentTime, velX, velY);
+                            AutoPilot(currHitObject, velX, velY);
 
                         if (currHitObject.Time - currentTime <= 0)
                         {
                             if (currHitObject != lastHitObject)
                             {
-                                Relax(currHitObject, currentTime, ref shouldPressSecondary, ref nextHitObjIndex);
+                                Relax(currHitObject, ref shouldPressSecondary, ref nextHitObjIndex);
                                 lastHitObject = currHitObject;
                             }
 
@@ -273,7 +272,7 @@ namespace osu_nhauto
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
 
-        private void AutoPilotLinearSlider(HitObjectSlider currHitObject, int currentTime, ref float velX, ref float velY)
+        private void AutoPilotLinearSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
         {
             float xDiff = currHitObject.Points[0].X - currHitObject.X;
             float yDiff = currHitObject.Points[0].Y - currHitObject.Y;
@@ -294,7 +293,7 @@ namespace osu_nhauto
             }
         }
 
-        private void AutoPilotSlider(HitObject currHitObject, int currentTime, ref float velX, ref float velY)
+        private void AutoPilotSlider(HitObject currHitObject, ref float velX, ref float velY)
         {
             if (currentTime < currHitObject.Time - 3)
             {
@@ -306,7 +305,7 @@ namespace osu_nhauto
                 switch (currSlider.CurveType)
                 {
                     case osu_database_reader.CurveType.Linear:
-                        AutoPilotLinearSlider(currSlider, currentTime, ref velX, ref velY);
+                        AutoPilotLinearSlider(currSlider, ref velX, ref velY);
                         break;
                     case osu_database_reader.CurveType.Perfect:
 
@@ -318,8 +317,7 @@ namespace osu_nhauto
             }
         }
 
-
-        private void AutoPilot(HitObject currHitObject, int currentTime, float velX, float velY)
+        private void AutoPilot(HitObject currHitObject, float velX, float velY)
         {
             switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
@@ -327,7 +325,7 @@ namespace osu_nhauto
                     AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Slider:
-                    AutoPilotSlider(currHitObject, currentTime, ref velX, ref velY);
+                    AutoPilotSlider(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Spinner:
                     if (currentTime >= currHitObject.Time - 50)
@@ -355,7 +353,7 @@ namespace osu_nhauto
             Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
         }
 
-        private void Relax(HitObject currHitObject, int currentTime, ref bool shouldPressSecondary, ref int nextHitObjIndex)
+        private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, ref int nextHitObjIndex)
         {
             shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
             keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
