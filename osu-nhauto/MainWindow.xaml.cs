@@ -121,7 +121,7 @@ namespace osu_nhauto
                         }
                     }
 
-                    Thread.Sleep(5);
+                    Thread.Sleep(50);
                 }
             }).Start();
 
