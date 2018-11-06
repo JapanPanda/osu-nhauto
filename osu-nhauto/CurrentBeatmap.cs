@@ -79,6 +79,8 @@ namespace osu_nhauto {
                         CircleSize = double.Parse(line.Split(':')[1]);
                     else if (line.StartsWith("SliderMultiplier:"))
                         SliderVelocity = double.Parse(line.Split(':')[1]);
+                    else if (line.StartsWith("OverallDifficulty:"))
+                        JudgementDifficulty = double.Parse(line.Split(':')[1]);
                     else if (line.Equals("[TimingPoints]"))
                         startParsing = 1;
                     else if (line.Equals("[HitObjects]"))
@@ -98,6 +100,7 @@ namespace osu_nhauto {
         public ReadOnlyCollection<HitObject> GetHitObjects() => hitObjects;
 
         public double CircleSize { get; private set; }
+        public double JudgementDifficulty { get; private set; }
         public double SliderVelocity { get; private set; }
 
         private InterProcessOsu ipc;
