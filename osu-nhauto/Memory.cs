@@ -96,21 +96,21 @@ namespace osu_nhauto
             return buffer;
         }
 
-        public Single ReadSingle(int address)
+        public float ReadSingle(int address)
         {
-            byte[] buffer = ReadBytes(address, sizeof(Single));
+            byte[] buffer = ReadBytes(address, sizeof(float));
             return BitConverter.ToSingle(buffer, 0);
         }
 
-        public Int32 ReadInt32(int address)
+        public int ReadInt32(int address)
         {
-            byte[] buffer = ReadBytes(address, sizeof(Int32));
+            byte[] buffer = ReadBytes(address, sizeof(int));
             return BitConverter.ToInt32(buffer, 0);
         }
 
-        public Boolean ReadBoolean(int address)
+        public bool ReadBoolean(int address)
         {
-            byte[] buffer = ReadBytes(address, sizeof(Boolean));
+            byte[] buffer = ReadBytes(address, sizeof(bool));
             return BitConverter.ToBoolean(buffer, 0);
         }
 

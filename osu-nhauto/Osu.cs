@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Windows;
-using osu.Shared;
 
 namespace osu_nhauto
 {
@@ -34,7 +32,7 @@ namespace osu_nhauto
 
             if (osuProcess != null && !osuProcess.HasExited)
             {
-                System.Console.WriteLine("Found process");
+                Console.WriteLine("Found process");
                 GetResolution();
                 memory = new Memory(osuProcess);
             }
@@ -45,7 +43,7 @@ namespace osu_nhauto
             try
             {
                 while (osuProcess.MainWindowHandle.ToInt32() == 0) ;
-                System.Console.WriteLine("Attempting to find signatures");
+                Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
                 int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, "xxxx????xx", 0x06000000);
@@ -61,14 +59,14 @@ namespace osu_nhauto
                 timeMod = memory.ReadInt32(addressPtr + 0x4) + 0x10; */
 
                 stopwatch.Stop();
-                System.Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
+                Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;
             }
             catch (System.Exception e)
             {
-                System.Console.WriteLine("Trying to load memory when osu! isn't fully loaded yet");
-                System.Console.WriteLine(e.Message);
-                System.Console.WriteLine(e.StackTrace);
+                Console.WriteLine("Trying to load memory when osu! isn't fully loaded yet");
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
                 //loadedAddresses = false;
                 loadedAddresses = false;
             }
@@ -92,26 +90,11 @@ namespace osu_nhauto
                 ObtainProcess();
         }
 
-        public Mods GetTimeMod()
-        {
-            System.Single speedMultiplier = memory.ReadSingle(timeMod);
-            switch (speedMultiplier)
-            {
-                case (System.Single)0.75:
-                    return Mods.HalfTime;
-                case 1:
-                    return Mods.None;
-                case (System.Single)1.5:
-                    return Mods.DoubleTime;
-                default:
-                    throw new System.Exception("Unable to find speed mod");
-            }
-        }
-
         public int GetAudioTime() => memory.ReadInt32(audioTime);
-        public int IsAudioPlaying() => memory.ReadInt32(audioPlaying);
+        public bool IsAudioPlaying() => memory.ReadInt32(audioPlaying) != 0;
         public bool IsAddressesLoaded() => this.loadedAddresses;
         public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
+        public float GetSpeedMultiplier() => memory.ReadSingle(timeMod);
         public Process GetProcess() => this.osuProcess;
         public RECT GetResolution() { GetWindowRect(osuProcess.MainWindowHandle, ref resolution); return this.resolution; }
         private Process osuProcess;
