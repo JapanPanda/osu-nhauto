@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WindowsInput;
 using osu.Shared;
+using osu_database_reader.Components;
 using osu_database_reader.Components.Beatmaps;
 using osu_database_reader.Components.HitObjects;
 
@@ -168,16 +169,18 @@ namespace osu_nhauto
         {
             ellipseAngle = -1;
             float xDiff, yDiff;
-            if ((lastHitObject.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
+            switch (lastHitObject.Type & (HitObjectType)0b1000_1011)
             {
-                GetCursorPos(out cursorPos);
-                xDiff = currHitObject.X * resConstants[0] + resConstants[2] - cursorPos.X;
-                yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
-            }
-            else
-            {
-                xDiff = currHitObject.X - lastHitObject.X;
-                yDiff = currHitObject.Y - lastHitObject.Y;
+                case HitObjectType.Slider:
+                case HitObjectType.Spinner:
+                    GetCursorPos(out cursorPos);
+                    xDiff = currHitObject.X * resConstants[0] + resConstants[2] - cursorPos.X;
+                    yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
+                    break;
+                default:
+                    xDiff = currHitObject.X - lastHitObject.X;
+                    yDiff = currHitObject.Y - lastHitObject.Y;
+                    break;
             }
             velX = xDiff / (currHitObject.Time - currentTime) * resConstants[0];
             velY = yDiff / (currHitObject.Time - currentTime) * resConstants[1];
@@ -186,7 +189,7 @@ namespace osu_nhauto
                 if (Math.Abs(i) >= 250)
                     return 9.8f; // 11.8 // 8.28
                 if (Math.Abs(i) >= 160)
-                        return 8.6f; // 9.6
+                    return 8.6f; // 9.6
                 return 7.1f; // 8.2
             });
             float dist = (float)Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
@@ -246,25 +249,6 @@ namespace osu_nhauto
 
             if (velY != 0.0f)
                 velY = Math.Min(Math.Abs(velY), 1.25f * Math.Abs(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]))) * Math.Sign(velY);
-
-            missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
-            missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
-
-            if (Math.Abs(missingX) >= 1)
-            {
-                int deltaX = missingX > 0 ? (int)Math.Floor(missingX) : (int)Math.Ceiling(missingX);
-                velX += deltaX;
-                missingX -= deltaX;
-            }
-
-            if (Math.Abs(missingY) >= 1)
-            {
-                int deltaY = missingY > 0 ? (int)Math.Floor(missingY) : (int)Math.Ceiling(missingY);
-                velY += deltaY;
-                missingY -= deltaY;
-            }
-            
-            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
         }
 
         private void AutoPilotSpinner(ref float velX, ref float velY)
@@ -289,36 +273,40 @@ namespace osu_nhauto
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
 
-        private void AutoPilotLinearSlider(HitObject currHitObject, HitObject lastHitObject, ref float velX, ref float velY)
+        private void AutoPilotLinearSlider(HitObjectSlider currHitObject, int currentTime, ref float velX, ref float velY)
         {
+            float xDiff = currHitObject.Points[0].X - currHitObject.X;
+            float yDiff = currHitObject.Points[0].Y - currHitObject.Y;
+            float angle = (float)Math.Atan2(yDiff, xDiff);
+            float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
 
-            float xDiff = (currHitObject.X - lastHitObject.X);
-            float yDiff = (currHitObject.Y - lastHitObject.Y);
+            velX = (float)(currHitObject.Length * Math.Cos(angle)) / duration * resConstants[0] * 2.6f;
+            velY = (float)(currHitObject.Length * Math.Sin(angle)) / duration * resConstants[1] * 2.6f;
 
-            velX = xDiff / (currHitObject.Time - lastHitObject.Time) * resConstants[0] * 5.5f;
-            velY = yDiff / (currHitObject.Time - lastHitObject.Time) * resConstants[1] * 5.5f;
-            
-            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
+            if (currHitObject.RepeatCount > 1)
+            {
+                int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
+                if (repeatNumber % 2 == 1)
+                {
+                    velX *= -1;
+                    velY *= -1;
+                }
+            }
         }
 
-        private void AutoPilotSlider(HitObject currHitObject, ref float velX, ref float velY)
+        private void AutoPilotSlider(HitObject currHitObject, int currentTime, ref float velX, ref float velY)
         {
-            if (currentTime <= currHitObject.Time)
+            if (currentTime < currHitObject.Time - 3)
             {
                 AutoPilotCircle(currHitObject, ref velX, ref velY);
             }
             else
             {
                 HitObjectSlider currSlider = currHitObject as HitObjectSlider;
-                
                 switch (currSlider.CurveType)
                 {
                     case osu_database_reader.CurveType.Linear:
-                        HitObject sliderHitObject = new HitObjectCircle();
-                        sliderHitObject.X = currSlider.Points[0].X;
-                        sliderHitObject.Y = currSlider.Points[0].Y;
-                        sliderHitObject.Time = currSlider.Time + CalculateSliderDuration(currSlider);
-                        AutoPilotLinearSlider(sliderHitObject, currHitObject, ref velX, ref velY);
+                        AutoPilotLinearSlider(currSlider, currentTime, ref velX, ref velY);
                         break;
                     case osu_database_reader.CurveType.Perfect:
 
@@ -339,13 +327,32 @@ namespace osu_nhauto
                     AutoPilotCircle(currHitObject, ref velX, ref velY);
                     break;
                 case HitObjectType.Slider:
-                    AutoPilotSlider(currHitObject, ref velX, ref velY);
+                    AutoPilotSlider(currHitObject, currentTime, ref velX, ref velY);
                     break;
                 case HitObjectType.Spinner:
                     if (currentTime >= currHitObject.Time - 50)
                         AutoPilotSpinner(ref velX, ref velY);
                     break;
             }
+
+            missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
+            missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
+
+            if (Math.Abs(missingX) >= 1)
+            {
+                int deltaX = missingX > 0 ? (int)Math.Floor(missingX) : (int)Math.Ceiling(missingX);
+                velX += deltaX;
+                missingX -= deltaX;
+            }
+
+            if (Math.Abs(missingY) >= 1)
+            {
+                int deltaY = missingY > 0 ? (int)Math.Floor(missingY) : (int)Math.Ceiling(missingY);
+                velY += deltaY;
+                missingY -= deltaY;
+            }
+
+            Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
         }
 
         private void Relax(HitObject currHitObject, int currentTime, ref bool shouldPressSecondary, ref int nextHitObjIndex)
