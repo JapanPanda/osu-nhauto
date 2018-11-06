@@ -146,7 +146,7 @@ namespace osu_nhauto
                     continueRunning = true;
                     break;
                 }
-                else
+                else if (!osuClient.IsAudioPlaying())
                 {
                     if (keyPressed == KeyPressed.Key1)
                         inputSimulator.Keyboard.KeyUp(keyCode1);
@@ -300,10 +300,11 @@ namespace osu_nhauto
 
         private void Relax(HitObject currHitObject, int currentTime, ref bool shouldPressSecondary, ref int nextHitObjIndex)
         {
+            Console.WriteLine("clicked");
             shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
             keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
-            Thread.Sleep(2);
+            //Thread.Sleep(2);
             bool pressedSecondary = shouldPressSecondary;
             Task.Delay(GetHitObjectEndTime(currHitObject) - currHitObject.Time + 16).ContinueWith(ant =>
             {
