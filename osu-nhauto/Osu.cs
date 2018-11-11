@@ -7,7 +7,10 @@ namespace osu_nhauto
     public sealed class Osu
     {
         [DllImport("user32.dll", SetLastError = true)]
-        static extern bool GetWindowRect(IntPtr hWnd, ref RECT Rect);
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT Rect);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetClientRect(IntPtr hWnd, out RECT Rect);
 
         public struct RECT
         {
@@ -33,7 +36,7 @@ namespace osu_nhauto
             if (osuProcess != null && !osuProcess.HasExited)
             {
                 Console.WriteLine("Found process");
-                GetResolution();
+                GetWindowResolution();
                 memory = new Memory(osuProcess);
             }
         }
@@ -96,13 +99,13 @@ namespace osu_nhauto
         public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
         public float GetSpeedMultiplier() => memory.ReadSingle(timeMod);
         public Process GetProcess() => this.osuProcess;
-        public RECT GetResolution() { GetWindowRect(osuProcess.MainWindowHandle, ref resolution); return this.resolution; }
+        public RECT GetWindowResolution() { GetWindowRect(osuProcess.MainWindowHandle, out RECT resolution); return resolution; }
+        public RECT GetClientResolution() { GetClientRect(osuProcess.MainWindowHandle, out RECT resolution); return resolution; }
         private Process osuProcess;
         private Memory memory;
         private int audioTime;
         private int audioPlaying;
         private int timeMod;
-        private RECT resolution;
         private bool loadedAddresses;
     }
 }
