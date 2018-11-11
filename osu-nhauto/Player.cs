@@ -83,7 +83,12 @@ namespace osu_nhauto
                     if (currHitObject != null)
                     {
                         if (nextHitObjIndex == 0 && currentTime < currHitObject.Time && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
-                            Mouse_Event(0x1 | 0x8000, (int)((currHitObject.X * resConstants[0] + resConstants[2]) * 65535 / 1920), (int)((currHitObject.Y * resConstants[1] + resConstants[3]) * 65535 / 1080), 0, 0);
+                        {
+                            int x = (int)(currHitObject.X * resConstants[0] + resConstants[2]);
+                            int y = (int)(currHitObject.Y * resConstants[1] + resConstants[3]);
+                            cursorPos2 = new POINT(x, y);
+                            Mouse_Event(0x1 | 0x8000, x * 65535 / 1920, y * 65535 / 1080, 0, 0);
+                        }
                         else
                             AutoPilot(currHitObject, velX, velY);
 
@@ -138,81 +143,6 @@ namespace osu_nhauto
                 Update();
         }
 
-        private float[] CalculatePlayfieldResolution()
-        {
-            Osu.RECT resolution = this.osuClient.GetResolution();
-            // TODO calculate border width and height for them borderless/fullscreen users rather than assume bordered window on Windows 10
-            int resX = resolution.Right - resolution.Left - 6;
-            int resY = resolution.Bottom - resolution.Top - 29 - 6;
-            Console.WriteLine("Left: {0} x Right: {1} x Top: {2} x Bottom: {3}", resolution.Left, resolution.Right, resolution.Top, resolution.Bottom);
-            Console.WriteLine("{0} x {1}", resolution.Right - resolution.Left - 6, resolution.Bottom - resolution.Top - 29 - 6);
-
-            float playfieldY = 0.8f * resY;
-            float playfieldX = playfieldY * 4 / 3;
-            Console.WriteLine("CALCULATED PLAYFIELD: {0} x {1}", playfieldX, playfieldY);
-
-            float playfieldOffsetX = (resX - playfieldX) / 2 + 3;
-            float playfieldOffsetY = (resY - 0.95385f * playfieldY) / 2 + 31; // 0.95385
-            Console.WriteLine("CALCULATED OFFSETS: {0} x {1}", playfieldOffsetX, playfieldOffsetY);
-
-            float ratioX = playfieldX / 512;
-            float ratioY = playfieldY / 384;
-            Console.WriteLine($"CALCULATED RATIOS: {ratioX} x {ratioY}");
-
-            float totalOffsetX = resolution.Left + playfieldOffsetX;
-            float totalOffsetY = resolution.Top + playfieldOffsetY;
-            return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
-        }
-
-        private void GetVelocities(HitObject currHitObject, HitObject lastHitObject, ref float velX, ref float velY)
-        {
-            ellipseAngle = -1;
-            float xDiff, yDiff;
-            switch (lastHitObject.Type & (HitObjectType)0b1000_1011)
-            {
-                case HitObjectType.Slider:
-                case HitObjectType.Spinner:
-                    GetCursorPos(out cursorPos);
-                    xDiff = currHitObject.X * resConstants[0] + resConstants[2] - cursorPos.X;
-                    yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
-                    break;
-                default:
-                    xDiff = currHitObject.X - lastHitObject.X;
-                    yDiff = currHitObject.Y - lastHitObject.Y;
-                    break;
-            }
-            velX = xDiff / (currHitObject.Time - currentTime) * resConstants[0];
-            velY = yDiff / (currHitObject.Time - currentTime) * resConstants[1];
-            Func<float, float> applyVelocityFactor = new Func<float, float>(i =>
-            {
-                if (Math.Abs(i) >= 250)
-                    return 9.8f; // 11.8 // 8.28
-                if (Math.Abs(i) >= 160)
-                    return 8.6f; // 9.6
-                return 7.1f; // 8.2
-            });
-            float dist = (float)Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
-            velX *= applyVelocityFactor(dist);
-            velY *= applyVelocityFactor(dist);
-        }
-
-        private POINT CalculateCenter()
-        {
-            Osu.RECT resolution = this.osuClient.GetResolution();
-            float xOffset = (resolution.Right - resolution.Left) / 2f;
-            float yOffset = (resolution.Bottom - resolution.Top) / 2f;
-            center.X = (int)(resolution.Left + xOffset);
-            center.Y = (int)(resolution.Top + yOffset + 29);
-            Console.WriteLine("CALCULATED CENTER: {0} x {1}", center.X, center.Y);
-            return center;
-        }
-
-        private bool IsCursorOnCircle(HitObject currHitObject)
-        {
-            GetCursorPos(out cursorPos);
-            return (float)Math.Sqrt(Math.Pow(cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]), 2))
-                <= circlePxSize / 2;
-        }
         private void AutoPilotCircle(HitObject currHitObject, ref float velX, ref float velY)
         {
             if (currHitObject == null || IsCursorOnCircle(currHitObject))
@@ -274,23 +204,34 @@ namespace osu_nhauto
 
         private void AutoPilotLinearSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
         {
-            float xDiff = currHitObject.Points[0].X - currHitObject.X;
-            float yDiff = currHitObject.Points[0].Y - currHitObject.Y;
-            float angle = (float)Math.Atan2(yDiff, xDiff);
+            float angle = (float)Math.Atan2(currHitObject.Points[0].Y - currHitObject.Y, currHitObject.Points[0].X - currHitObject.X);
             float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+            float timeDiff = (currentTime - currHitObject.Time) % duration;
+            int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
+            if (repeatNumber % 2 == 1)
+                timeDiff = duration - timeDiff;
+            float expectedX = (float)(((cursorPos2.X - resConstants[2]) / resConstants[0]) + currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + resConstants[2];
+            float expectedY = (float)(((cursorPos2.Y - resConstants[3]) / resConstants[1]) + currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + resConstants[3];
 
-            velX = (float)(currHitObject.Length * Math.Cos(angle)) / duration * resConstants[0] * 2.6f;
-            velY = (float)(currHitObject.Length * Math.Sin(angle)) / duration * resConstants[1] * 2.6f;
+            GetCursorPos(out cursorPos);
+            velX = expectedX - cursorPos.X;
+            velY = expectedY - cursorPos.Y;
 
+            /*
             if (currHitObject.RepeatCount > 1)
             {
-                int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
+                //int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
                 if (repeatNumber % 2 == 1)
                 {
                     velX *= -1;
                     velY *= -1;
                 }
             }
+            */
+        }
+
+        private void AutoPilotPerfectSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
+        {
         }
 
         private void AutoPilotSlider(HitObject currHitObject, ref float velX, ref float velY)
@@ -298,9 +239,13 @@ namespace osu_nhauto
             if (currentTime < currHitObject.Time - 3)
             {
                 AutoPilotCircle(currHitObject, ref velX, ref velY);
+                cursorPos2 = cursorPos;
             }
             else
             {
+                if (cursorPos2.X == -1)
+                    GetCursorPos(out cursorPos2);
+
                 HitObjectSlider currSlider = currHitObject as HitObjectSlider;
                 switch (currSlider.CurveType)
                 {
@@ -308,10 +253,10 @@ namespace osu_nhauto
                         AutoPilotLinearSlider(currSlider, ref velX, ref velY);
                         break;
                     case osu_database_reader.CurveType.Perfect:
-
+                        AutoPilotPerfectSlider(currSlider, ref velX, ref velY);
                         break;
                     case osu_database_reader.CurveType.Bezier:
-
+                        AutoPilotPerfectSlider(currSlider, ref velX, ref velY);
                         break;
                 }
             }
@@ -424,6 +369,83 @@ namespace osu_nhauto
             }
         }
 
+        private float[] CalculatePlayfieldResolution()
+        {
+            Osu.RECT wResolution = osuClient.GetWindowResolution();
+            Osu.RECT cResolution = osuClient.GetClientResolution();
+            // TODO calculate border width and height for them borderless/fullscreen users rather than assume bordered window on Windows 10
+            //int resY = wResolution.Bottom - wResolution.Top - 29 - 6;
+            Console.WriteLine("Left: {0} x Right: {1} x Top: {2} x Bottom: {3}", wResolution.Left, wResolution.Right, wResolution.Top, wResolution.Bottom);
+            Console.WriteLine("{0} x {1}", wResolution.Right - wResolution.Left - 6, wResolution.Bottom - wResolution.Top - 29 - 6);
+            float borderThickness = (wResolution.Right - wResolution.Left - cResolution.Right) / 2;
+            float titlebarHeight = wResolution.Bottom - wResolution.Top - cResolution.Bottom - 2 * borderThickness;
+            float playfieldY = 0.8f * cResolution.Bottom;
+            float playfieldX = playfieldY * 4 / 3;
+            Console.WriteLine("CALCULATED PLAYFIELD: {0} x {1}", playfieldX, playfieldY);
+
+            float playfieldOffsetX = (cResolution.Right - playfieldX) / 2 + borderThickness / 2 + 1;
+            float playfieldOffsetY = (cResolution.Bottom - 0.95385f * playfieldY) / 2 + titlebarHeight + borderThickness / 2; // 0.95385
+            Console.WriteLine("CALCULATED OFFSETS: {0} x {1}", playfieldOffsetX, playfieldOffsetY);
+
+            float ratioX = playfieldX / 512;
+            float ratioY = playfieldY / 384;
+            Console.WriteLine($"CALCULATED RATIOS: {ratioX} x {ratioY}");
+
+            float totalOffsetX = wResolution.Left + playfieldOffsetX;
+            float totalOffsetY = wResolution.Top + playfieldOffsetY;
+            return new float[4] { ratioX, ratioY, totalOffsetX, totalOffsetY };
+        }
+
+        private void GetVelocities(HitObject currHitObject, HitObject lastHitObject, ref float velX, ref float velY)
+        {
+            ellipseAngle = -1;
+            float xDiff, yDiff;
+            switch (lastHitObject.Type & (HitObjectType)0b1000_1011)
+            {
+                case HitObjectType.Slider:
+                case HitObjectType.Spinner:
+                    GetCursorPos(out cursorPos);
+                    xDiff = currHitObject.X * resConstants[0] + resConstants[2] - cursorPos.X;
+                    yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
+                    break;
+                default:
+                    xDiff = currHitObject.X - lastHitObject.X;
+                    yDiff = currHitObject.Y - lastHitObject.Y;
+                    break;
+            }
+            velX = xDiff / (currHitObject.Time - currentTime) * resConstants[0];
+            velY = yDiff / (currHitObject.Time - currentTime) * resConstants[1];
+            Func<float, float> applyVelocityFactor = new Func<float, float>(i =>
+            {
+                if (Math.Abs(i) >= 250)
+                    return 9.8f; // 11.8 // 8.28
+                if (Math.Abs(i) >= 160)
+                    return 8.6f; // 9.6
+                return 7.1f; // 8.2
+            });
+            float dist = (float)Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
+            velX *= applyVelocityFactor(dist);
+            velY *= applyVelocityFactor(dist);
+        }
+
+        private POINT CalculateCenter()
+        {
+            Osu.RECT resolution = this.osuClient.GetWindowResolution();
+            float xOffset = (resolution.Right - resolution.Left) / 2f;
+            float yOffset = (resolution.Bottom - resolution.Top) / 2f;
+            center.X = (int)(resolution.Left + xOffset);
+            center.Y = (int)(resolution.Top + yOffset + 29);
+            Console.WriteLine("CALCULATED CENTER: {0} x {1}", center.X, center.Y);
+            return center;
+        }
+
+        private bool IsCursorOnCircle(HitObject currHitObject)
+        {
+            GetCursorPos(out cursorPos);
+            return (float)Math.Sqrt(Math.Pow(cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]), 2))
+                <= circlePxSize / 2;
+        }
+
         public void ToggleAutoPilot() => autopilotRunning = !autopilotRunning;
         public void ToggleRelax() => relaxRunning = !relaxRunning;
         public char GetKey1() => key1;
@@ -446,7 +468,7 @@ namespace osu_nhauto
         private double[] nextTimings = new double[2];
         private InputSimulator inputSimulator = new InputSimulator();
         private CurrentBeatmap beatmap;
-        private POINT cursorPos;
+        private POINT cursorPos, cursorPos2 = new POINT(-1, -1);
         private POINT center;
         private Osu osuClient;
         private float missingX, missingY;
