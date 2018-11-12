@@ -145,11 +145,18 @@ namespace osu_nhauto
 
         private void AutoPilotCircle(HitObject currHitObject, ref float velX, ref float velY)
         {
-            if (currHitObject == null || IsCursorOnCircle(currHitObject))
+            if (currHitObject == null)
                 return;
+
+            if (IsCursorOnCircle(currHitObject))
+            {
+                velX *= 0.025f;
+                velY *= 0.025f;
+                return;
+            }
+
             float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
-            float circlePxSize = (float)(54.4 - 4.48 * beatmap.CircleSize);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 float dist = Math.Abs(f) - circlePxSize / 1.2f;
@@ -167,10 +174,10 @@ namespace osu_nhauto
                     return 0.04f;
                 return 0;
             });
-            if (xDiff == 0 || (velX > 0 && xDiff >= 0) || (velX < 0 && xDiff <= 0))
+            if (velX * xDiff >= 0)
                 velX = -xDiff * applyAutoCorrect(xDiff) * (float)Math.Pow(resConstants[0], 0.825);
 
-            if (yDiff == 0 || (velY > 0 && yDiff >= 0) || (velY < 0 && yDiff <= 0))
+            if (velY * yDiff >= 0)
                 velY = -yDiff * applyAutoCorrect(yDiff) * (float)Math.Pow(resConstants[1], 0.825);
             
             if (velX != 0.0f)
@@ -259,8 +266,6 @@ namespace osu_nhauto
             float arcAngle = (float)currHitObject.Length / radius;
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
 
-            Console.WriteLine($"start={startAngle * 180 / Math.PI}, end={endAngle * 180 / Math.PI}");
-
             float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
             float timeDiff = (currentTime - currHitObject.Time) % duration;
             int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
@@ -277,7 +282,7 @@ namespace osu_nhauto
 
         private void AutoPilotSlider(HitObject currHitObject, ref float velX, ref float velY)
         {
-            if (currentTime < currHitObject.Time - 3)
+            if (currentTime < currHitObject.Time)
             {
                 AutoPilotCircle(currHitObject, ref velX, ref velY);
                 cursorPos2 = cursorPos;
@@ -437,10 +442,18 @@ namespace osu_nhauto
 
         private void GetVelocities(HitObject currHitObject, HitObject lastHitObject, ref float velX, ref float velY)
         {
+            if ((currHitObject.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
+            {
+                velX = 0;
+                velY = 0;
+                return;
+            }
+
             ellipseAngle = -1;
             float xDiff, yDiff;
             switch (lastHitObject.Type & (HitObjectType)0b1000_1011)
             {
+                case HitObjectType.Normal:
                 case HitObjectType.Slider:
                 case HitObjectType.Spinner:
                     GetCursorPos(out cursorPos);
