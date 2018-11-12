@@ -189,8 +189,8 @@ namespace osu_nhauto
             else
                 ellipseAngle += ANGLE_INCREMENT;
 
-            if (ellipseAngle > (2 * Math.PI))
-                ellipseAngle = ellipseAngle % (2 * Math.PI);
+            if (ellipseAngle > TWO_PI)
+                ellipseAngle = ellipseAngle % TWO_PI;
 
             float x = (center.X + (float)(dist * Math.Cos(ellipseAngle))) * 65535 / 1920;
             float y = (center.Y + (float)(dist * Math.Sin(ellipseAngle))) * 65535 / 1080;
@@ -210,8 +210,8 @@ namespace osu_nhauto
             int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
             if (repeatNumber % 2 == 1)
                 timeDiff = duration - timeDiff;
-            float expectedX = (float)(((cursorPos2.X - resConstants[2]) / resConstants[0]) + currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + resConstants[2];
-            float expectedY = (float)(((cursorPos2.Y - resConstants[3]) / resConstants[1]) + currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + resConstants[3];
+            float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
+            float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
 
             GetCursorPos(out cursorPos);
             velX = expectedX - cursorPos.X;
@@ -232,6 +232,47 @@ namespace osu_nhauto
 
         private void AutoPilotPerfectSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
         {
+            Vec2Float midpt1 = new Vec2Float((currHitObject.X + currHitObject.Points[0].X) / 2f, (currHitObject.Y + currHitObject.Points[0].Y) / 2f);
+            Vec2Float midpt2 = new Vec2Float((currHitObject.Points[0].X + currHitObject.Points[1].X) / 2f, (currHitObject.Points[0].Y + currHitObject.Points[1].Y) / 2f);
+            Vec2Float norml1 = new Vec2Float(currHitObject.Points[0].X - currHitObject.X, currHitObject.Points[0].Y - currHitObject.Y).Normal();
+            Vec2Float norml2 = new Vec2Float(currHitObject.Points[1].X - currHitObject.Points[0].X, currHitObject.Points[1].Y - currHitObject.Points[0].Y).Normal();
+            Vec2Float center = Vec2Float.Intersect(midpt1, norml1, midpt2, norml2);
+
+            float startAngle = (float)Math.Atan2(currHitObject.Y - center.Y, currHitObject.X - center.X);
+            float midAngle = (float)Math.Atan2(currHitObject.Points[0].Y - center.Y, currHitObject.Points[0].X - center.X);
+            float endAngle = (float)Math.Atan2(currHitObject.Points[1].Y - center.Y, currHitObject.Points[1].X - center.X);
+
+            Func<float, float, float, bool> isInside = (a, b, c) => (b > a && b < c) || (b < a && b > c);
+            if (!isInside(startAngle, midAngle, endAngle))
+            {
+                if (Math.Abs(startAngle + TWO_PI - endAngle) < TWO_PI && isInside(startAngle + TWO_PI, midAngle, endAngle))
+                    startAngle += TWO_PI;
+                else if (Math.Abs(startAngle - (endAngle + TWO_PI)) < TWO_PI && isInside(startAngle, midAngle, endAngle + TWO_PI))
+                    endAngle += TWO_PI;
+                else if (Math.Abs(startAngle - TWO_PI - endAngle) < TWO_PI && isInside(startAngle - TWO_PI, midAngle, endAngle))
+                    startAngle -= TWO_PI;
+                else if (Math.Abs(startAngle - (endAngle - TWO_PI)) < TWO_PI && isInside(startAngle, midAngle, endAngle - TWO_PI))
+                    endAngle -= TWO_PI;
+            }
+
+            float radius = (float)Math.Sqrt(Math.Pow(currHitObject.X - center.X, 2) + Math.Pow(currHitObject.Y - center.Y, 2));
+            float arcAngle = (float)currHitObject.Length / radius;
+            endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
+
+            Console.WriteLine($"start={startAngle * 180 / Math.PI}, end={endAngle * 180 / Math.PI}");
+
+            float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+            float timeDiff = (currentTime - currHitObject.Time) % duration;
+            int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
+            if (repeatNumber % 2 == 1)
+                timeDiff = duration - timeDiff;
+
+            float currAngle = startAngle + (endAngle - startAngle) * timeDiff / duration;
+            float expectedX = (float)(center.X - currHitObject.X + radius * Math.Cos(currAngle)) * resConstants[0] + cursorPos2.X;
+            float expectedY = (float)(center.Y - currHitObject.Y + radius * Math.Sin(currAngle)) * resConstants[1] + cursorPos2.Y;
+            GetCursorPos(out cursorPos);
+            velX = expectedX - cursorPos.X;
+            velY = expectedY - cursorPos.Y;
         }
 
         private void AutoPilotSlider(HitObject currHitObject, ref float velX, ref float velY)
@@ -243,9 +284,6 @@ namespace osu_nhauto
             }
             else
             {
-                if (cursorPos2.X == -1)
-                    GetCursorPos(out cursorPos2);
-
                 HitObjectSlider currSlider = currHitObject as HitObjectSlider;
                 switch (currSlider.CurveType)
                 {
@@ -255,6 +293,7 @@ namespace osu_nhauto
                     case osu_database_reader.CurveType.Perfect:
                         AutoPilotPerfectSlider(currSlider, ref velX, ref velY);
                         break;
+                    case osu_database_reader.CurveType.Catmull:
                     case osu_database_reader.CurveType.Bezier:
                         AutoPilotPerfectSlider(currSlider, ref velX, ref velY);
                         break;
@@ -278,19 +317,19 @@ namespace osu_nhauto
                     break;
             }
 
-            missingX += velX - (velX > 0 ? (int)Math.Floor(velX) : (int)Math.Ceiling(velX));
-            missingY += velY - (velY > 0 ? (int)Math.Floor(velY) : (int)Math.Ceiling(velY));
+            missingX += velX - (int)velX;
+            missingY += velY - (int)velY;
 
             if (Math.Abs(missingX) >= 1)
             {
-                int deltaX = missingX > 0 ? (int)Math.Floor(missingX) : (int)Math.Ceiling(missingX);
+                int deltaX = (int)missingX;
                 velX += deltaX;
                 missingX -= deltaX;
             }
 
             if (Math.Abs(missingY) >= 1)
             {
-                int deltaY = missingY > 0 ? (int)Math.Floor(missingY) : (int)Math.Ceiling(missingY);
+                int deltaY = (int)missingY;
                 velY += deltaY;
                 missingY -= deltaY;
             }
@@ -409,12 +448,12 @@ namespace osu_nhauto
                     yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
                     break;
                 default:
-                    xDiff = currHitObject.X - lastHitObject.X;
-                    yDiff = currHitObject.Y - lastHitObject.Y;
+                    xDiff = (currHitObject.X - lastHitObject.X) * resConstants[0];
+                    yDiff = (currHitObject.Y - lastHitObject.Y) * resConstants[1];
                     break;
             }
-            velX = xDiff / (currHitObject.Time - currentTime) * resConstants[0];
-            velY = yDiff / (currHitObject.Time - currentTime) * resConstants[1];
+            velX = xDiff / (currHitObject.Time - currentTime);
+            velY = yDiff / (currHitObject.Time - currentTime);
             Func<float, float> applyVelocityFactor = new Func<float, float>(i =>
             {
                 if (Math.Abs(i) >= 250)
@@ -478,5 +517,7 @@ namespace osu_nhauto
         private KeyPressed keyPressed = KeyPressed.None;
 
         private const double ANGLE_INCREMENT = Math.PI / 18;
+        private const float HALF_PI = (float)Math.PI / 2;
+        private const float TWO_PI = 2 * (float)Math.PI;
     }
 }
