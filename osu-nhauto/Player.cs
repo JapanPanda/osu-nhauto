@@ -37,6 +37,18 @@ namespace osu_nhauto
             }
         }
 
+        private struct FPOINT
+        {
+            public float X;
+            public float Y;
+
+            public FPOINT(float x, float y)
+            {
+                this.X = x;
+                this.Y = y;
+            }
+        }
+
         private enum KeyPressed
         {
             None, Key1, Key2
@@ -280,6 +292,112 @@ namespace osu_nhauto
             velY = expectedY - cursorPos.Y;
         }
 
+        FPOINT prevPoint;
+        bool test = false;
+        float currStep = 0;
+        FPOINT currBezPoint;
+        FPOINT prevBezPoint;
+        private void AutoPilotBezierSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
+        {
+            // Calculation of points in bezier slider
+            if (!test)
+            {
+                for (float i = 0; i <= 1; i += 0.01f)
+                {
+                    FPOINT test = GetBezierPoint(currHitObject, i);
+                    Console.WriteLine($"{test.X} x {test.Y}");
+
+                }
+                test = true;
+            }
+            
+            if (currStep == 0)
+            {
+                Console.WriteLine("Initialize Bezier Point");
+                prevBezPoint.X = currHitObject.X;
+                prevBezPoint.Y = currHitObject.Y;
+                currBezPoint = GetBezierPoint(currHitObject, currStep);
+                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
+                float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
+                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+                float timeDiff = (0.01f * duration) % duration;
+                float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
+
+                GetCursorPos(out cursorPos);
+                velX = expectedX - cursorPos.X;
+                velY = expectedY - cursorPos.Y;
+                currStep += 0.01f;
+
+            }
+            else if (cursorPos.X >= currBezPoint.X - 15 && cursorPos.X <= currBezPoint.X + 15 && cursorPos.Y >= currBezPoint.Y - 15 && cursorPos.Y <= currBezPoint.Y + 15)
+            {
+                Console.WriteLine("New Bezier Point");
+                prevBezPoint = currBezPoint;
+                currBezPoint = GetBezierPoint(currHitObject, currStep);
+                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
+                float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
+                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+                float timeDiff = (0.01f * duration) % duration;
+                float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
+
+                GetCursorPos(out cursorPos);
+                velX = expectedX - cursorPos.X;
+                velY = expectedY - cursorPos.Y;
+                currStep += 0.01f;
+
+                Console.WriteLine($"Expected: {expectedX} x {expectedY}");
+            }
+            else
+            {
+                float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
+                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
+
+                float timeDiff = (0.01f * duration) % duration;
+                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.1f * duration)) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.1f * duration)) * resConstants[1] + cursorPos2.Y;
+
+                GetCursorPos(out cursorPos);
+                velX = expectedX - cursorPos.X;
+                velY = expectedY - cursorPos.Y;
+
+                //Console.WriteLine($"Distance: {currBezPoint.X} x {currBezPoint.Y} || {prevBezPoint.X} x {prevBezPoint.Y} = {distance}");
+                //Console.WriteLine($"Velocity: {velX} x {velY}");
+            }
+
+        }
+
+        private FPOINT GetBezierPoint(HitObjectSlider currHitObject, float step)
+        {
+            FPOINT point = new FPOINT();
+            int points = currHitObject.Points.Count - 1;
+            for (int i = 0; i <= points; i++)
+            {
+                point.X += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * currHitObject.Points[i].X);
+                point.Y += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * currHitObject.Points[i].Y);
+            }
+            //point.X = (1 - step) * (1 - step) * (1 - step) * currHitObject.Points[0].X + 3 * (1 - step) * (1 - step) * step * currHitObject.Points[1].X + 3 * (1 - step) * step * step * currHitObject.Points[2].X + step * step * step * currHitObject.Points[3].X;
+            return point;
+        }
+
+        private int GetBinomialCoefficient(int n, int k)
+        {
+            int res = 1;
+
+            if (k > n - k)
+                k = n - k;
+
+            for (int i = 0; i < k; ++i)
+            {
+                res *= (n - i);
+                res /= (i + 1);
+            }
+            return res;
+        }
+
+
         private void AutoPilotSlider(HitObject currHitObject, ref float velX, ref float velY)
         {
             if (currentTime < currHitObject.Time)
@@ -300,7 +418,7 @@ namespace osu_nhauto
                         break;
                     case osu_database_reader.CurveType.Catmull:
                     case osu_database_reader.CurveType.Bezier:
-                        AutoPilotPerfectSlider(currSlider, ref velX, ref velY);
+                        AutoPilotBezierSlider(currSlider, ref velX, ref velY);
                         break;
                 }
             }
@@ -520,6 +638,7 @@ namespace osu_nhauto
         private double[] nextTimings = new double[2];
         private InputSimulator inputSimulator = new InputSimulator();
         private CurrentBeatmap beatmap;
+        private HitObjectSlider[] sliders;
         private POINT cursorPos, cursorPos2 = new POINT(-1, -1);
         private POINT center;
         private Osu osuClient;
