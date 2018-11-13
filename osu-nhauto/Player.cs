@@ -309,23 +309,15 @@ namespace osu_nhauto
             }
             if (test2)
                 return;
+            float timeDiff;
+            float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
             if (currStep == 0)
             {
                 prevBezPoint = GetBezierPoint(currHitObject, currStep);
                 currStep += 0.01f;
                 currBezPoint = GetBezierPoint(currHitObject, currStep);
-
                 Console.WriteLine($"Initialize: {currStep}: {currBezPoint.X} x {currBezPoint.Y} || {prevBezPoint.X} x {prevBezPoint.Y}");
-                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
-                float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
-                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
-                float timeDiff = (0.01f * duration) % duration;
-                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
-
-                GetCursorPos(out cursorPos);
-                velX = expectedX - cursorPos.X;
-                velY = expectedY - cursorPos.Y;
+                timeDiff = (0.01f * duration) % duration;
                 prevTime = currentTime;
             }
             else if (cursorPos.X >= (currBezPoint.X) * resConstants[0] + resConstants[2] - 20 && (cursorPos.X <= (currBezPoint.X) * resConstants[0] + resConstants[2] + 20)
@@ -334,25 +326,13 @@ namespace osu_nhauto
                 currStep += 0.01f;
                 prevBezPoint = currBezPoint;
                 currBezPoint = GetBezierPoint(currHitObject, currStep);
-
                 cursorPos2.X = cursorPos.X;
                 cursorPos2.Y = cursorPos.Y;
                 GetCursorPos(out cursorPos);
                 Console.WriteLine($"New Bezier Point: {currStep}: {currBezPoint.X} x {currBezPoint.Y}");
                 Console.WriteLine($"NEW!!! {cursorPos.X} x {cursorPos.Y} || {cursorPos2.X} x {cursorPos2.Y} || {(currBezPoint.X) * resConstants[0] + resConstants[2]} x {(currBezPoint.Y) * resConstants[1] + resConstants[3]}");
-                float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
-                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
-                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
-
-                float timeDiff = (currentTime - prevTime) % duration;
-                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
-
-                GetCursorPos(out cursorPos);
-                velX = expectedX - cursorPos.X;
-                velY = expectedY - cursorPos.Y;
+                timeDiff = (currentTime - prevTime) % duration;
                 prevTime = currentTime;
-                Console.WriteLine($"Expected: {expectedX} x {expectedY}");
             }
             else
             {
@@ -360,25 +340,23 @@ namespace osu_nhauto
                 {
                     return;
                 }
-
-                float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
-                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
-                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
-
-                
-                float timeDiff = (currentTime - prevTime) % duration;
-                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
-                
-                GetCursorPos(out cursorPos);
-                velX = expectedX - cursorPos.X;
-                velY = expectedY - cursorPos.Y;
+                timeDiff = (currentTime - prevTime) % duration;
                 Console.WriteLine($"{cursorPos.X} x {cursorPos.Y} || {(currBezPoint.X) * resConstants[0] + resConstants[2]} x {(currBezPoint.Y) * resConstants[1] + resConstants[3]}");
-                Console.WriteLine($"Expected: {expectedX} x {expectedY}");
                 //Console.WriteLine($"Distance: {currBezPoint.X} x {currBezPoint.Y} || {prevBezPoint.X} x {prevBezPoint.Y} = {distance}");
                 
             }
+
+            float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
+            float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
+
+            float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
+            float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
+
+            GetCursorPos(out cursorPos);
+            velX = expectedX - cursorPos.X;
+            velY = expectedY - cursorPos.Y;
             Console.WriteLine($"Velocity: {velX} x {velY}");
+            Console.WriteLine($"Expected: {expectedX} x {expectedY}");
 
         }
 
