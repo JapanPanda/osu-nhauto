@@ -300,7 +300,7 @@ namespace osu_nhauto
             if (test2)
                 return;
             float timeDiff;
-            float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+            float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
             if (currStep == 0)
             {
                 prevBezPoint = GetBezierPoint(currHitObject, currStep);
