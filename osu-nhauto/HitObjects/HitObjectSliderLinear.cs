@@ -15,7 +15,7 @@ namespace osu_nhauto.HitObjects
             yComponent = (float)Math.Sin(angle);
         }
 
-        public override Vec2Float GetPointAt(int currentTime)
+        public override Vec2Float GetOffset(int currentTime)
         {
             float expectedPosition = (float)PixelLength * GetTimeDiff(currentTime) / PathTime;
             return new Vec2Float(expectedPosition * xComponent, expectedPosition * yComponent);

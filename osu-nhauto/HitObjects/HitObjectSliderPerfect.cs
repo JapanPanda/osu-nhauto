@@ -42,7 +42,7 @@ namespace osu_nhauto.HitObjects
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
         }
 
-        public override Vec2Float GetPointAt(int currentTime)
+        public override Vec2Float GetOffset(int currentTime)
         {
             float currAngle = startAngle + (endAngle - startAngle) * GetTimeDiff(currentTime) / PathTime;
             return new Vec2Float(circleCenter.X - X + circleRadius * (float)Math.Cos(currAngle), circleCenter.Y - Y + circleRadius * (float)Math.Sin(currAngle));
