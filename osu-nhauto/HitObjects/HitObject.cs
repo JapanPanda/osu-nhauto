@@ -8,7 +8,7 @@ namespace osu_nhauto.HitObjects
         public int Y { get; private set; }
         public int Time { get; private set; }
         public int EndTime { get; protected set; }
-        public int StackHeight { get; protected set; }
+        public int StackHeight { get; set; }
         public HitObjectType Type { get; private set; }
 
         protected HitObject(osu_database_reader.Components.HitObjects.HitObject hollyObj)

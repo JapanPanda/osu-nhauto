@@ -9,6 +9,7 @@ using osu_database_reader.BinaryFiles;
 using osu_database_reader.Components.Beatmaps;
 using nhauto = osu_nhauto.HitObjects;
 using holly = osu_database_reader.Components.HitObjects;
+using osu_nhauto.HitObjects;
 
 namespace osu_nhauto {
 
@@ -139,7 +140,10 @@ namespace osu_nhauto {
             timingPoints = timingPtsTemp.AsReadOnly();
             hitObjects = hitObjsTemp.AsReadOnly();
 
-            //ApplyStacking(); // TODO check file format version < 6
+            ApplyStacking(); // TODO check file format version < 6
+
+            for (int i = 0; i < hitObjects.Count; ++i)
+                Console.WriteLine(hitObjects[i].StackHeight);
 
             stopwatch.Stop();
             Console.WriteLine($"Elapsed time to parse beatmap: {stopwatch.ElapsedMilliseconds}ms");
@@ -158,6 +162,7 @@ namespace osu_nhauto {
                 timePreempt += 600 * (5 - ApproachRate) / 5;
             float stackThreshold = timePreempt * StackLeniency;
 
+            /*
             int finalIndex = hitObjects.Count - 1;
             int extendedEndIndex = finalIndex;
             for (int i = finalIndex; i >= 0; --i)
@@ -190,6 +195,70 @@ namespace osu_nhauto {
                     extendedEndIndex = stackBaseInd;
                     if (extendedEndIndex == finalIndex)
                         break;
+                }
+            }
+            */
+
+            const int STACK_LENIENCE = 3;
+            for (int i = hitObjects.Count - 1; i > 0; i--)
+            {
+                int n = i;
+                HitObject objectI = hitObjects[i];
+                if (objectI.StackHeight != 0 || objectI.Type == HitObjectType.Spinner)
+                    continue;
+
+                if (objectI.Type == HitObjectType.Normal)
+                {
+                    while (--n >= 0)
+                    {
+                        HitObject objectN = hitObjects[n];
+                        if (objectN.Type == HitObjectType.Spinner)
+                            continue;
+
+                        if (objectI.Time - objectN.EndTime > stackThreshold)
+                            break;
+
+                        if (objectN.Type == HitObjectType.Slider)
+                        {
+                            HitObjectSlider sliderN = objectN as HitObjectSlider;
+                            Vec2Float endPosition = sliderN.GetPointAt(sliderN.EndTime);
+                            if (Math.Sqrt(Math.Pow(sliderN.X + endPosition.X - objectI.X, 2) + Math.Pow(sliderN.Y + endPosition.Y - objectI.Y, 2)) < STACK_LENIENCE)
+                            {
+                                int offset = objectI.StackHeight - objectN.StackHeight + 1;
+                                for (int j = n + 1; j <= i; j++)
+                                {
+                                    if (Math.Sqrt(Math.Pow(sliderN.X + endPosition.X - hitObjects[j].X, 2) + Math.Pow(sliderN.Y + endPosition.Y - hitObjects[j].Y, 2)) < STACK_LENIENCE)
+                                        hitObjects[j].StackHeight -= offset;
+                                }
+                                break;
+                            }
+                        }
+
+                        if (Math.Sqrt(Math.Pow(objectN.X - objectI.X, 2) + Math.Pow(objectN.Y - objectI.Y, 2)) < STACK_LENIENCE)
+                        {
+                            objectN.StackHeight = objectI.StackHeight + 1;
+                            objectI = objectN;
+                        }
+                    }
+                }
+                else if (objectI.Type == HitObjectType.Slider)
+                {
+                    while (--n >= 0)
+                    {
+                        HitObject objectN = hitObjects[n];
+                        if (objectN.Type == HitObjectType.Spinner)
+                            continue;
+
+                        if (objectI.Time - objectN.EndTime > stackThreshold)
+                            break;
+
+                        Vec2Float endPosition = objectN.Type == HitObjectType.Slider ? (objectN as HitObjectSlider).GetPointAt(objectN.EndTime) : new Vec2Float(0, 0);
+                        if (Math.Sqrt(Math.Pow(objectN.X + endPosition.X - objectI.X, 2) + Math.Pow(objectN.Y + endPosition.Y - objectI.Y, 2)) < STACK_LENIENCE)
+                        {
+                            objectN.StackHeight = objectI.StackHeight + 1;
+                            objectI = objectN;
+                        }
+                    }
                 }
             }
         }

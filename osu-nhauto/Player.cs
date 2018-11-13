@@ -69,8 +69,7 @@ namespace osu_nhauto
             BeatmapUtils.InitializeBeatmap(beatmap);
             currStep = 0;
             bool continueRunning = false;
-            int nextTimingPtIndex = 0, nextHitObjIndex = 0;
-            TimingPoint nextTimingPt = BeatmapUtils.GetNextTimingPoint(ref nextTimingPtIndex);
+            int nextHitObjIndex = 0;
             HitObject lastHitObject = null;
             HitObject currHitObject = beatmap.GetHitObjects()[0];
             bool shouldPressSecondary = false;
@@ -84,18 +83,13 @@ namespace osu_nhauto
                 if (currentTime > lastTime)
                 {
                     lastTime = currentTime;
-                    if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
-                    {
-                        BeatmapUtils.UpdateTimingSettings();
-                        ++nextTimingPtIndex;
-                        nextTimingPt = BeatmapUtils.GetNextTimingPoint(ref nextTimingPtIndex);
-                    }
                     if (currHitObject != null)
                     {
                         if (nextHitObjIndex == 0 && currentTime < currHitObject.Time && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
                         {
-                            int x = (int)(currHitObject.X * resConstants[0] + resConstants[2]);
-                            int y = (int)(currHitObject.Y * resConstants[1] + resConstants[3]);
+                            float stackOffset = BeatmapUtils.CirclePxRadius / 10 * currHitObject.StackHeight;
+                            int x = (int)((currHitObject.X - stackOffset) * resConstants[0] + resConstants[2]);
+                            int y = (int)((currHitObject.Y - stackOffset) * resConstants[1] + resConstants[3]);
                             cursorPos2 = new POINT(x, y);
                             Mouse_Event(0x1 | 0x8000, x * 65535 / 1920, y * 65535 / 1080, 0, 0);
                         }
@@ -162,8 +156,9 @@ namespace osu_nhauto
                 return;
             }
 
-            float xDiff = cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]);
-            float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
+            float stackOffset = BeatmapUtils.CirclePxRadius / 10 * currHitObject.StackHeight;
+            float xDiff = cursorPos.X - ((currHitObject.X - stackOffset) * resConstants[0] + resConstants[2]);
+            float yDiff = cursorPos.Y - ((currHitObject.Y - stackOffset) * resConstants[1] + resConstants[3]);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 float dist = Math.Abs(f) - BeatmapUtils.CirclePxRadius;
@@ -215,67 +210,6 @@ namespace osu_nhauto
             }
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
-
-        /*
-        private void AutoPilotLinearSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
-        {
-            float angle = (float)Math.Atan2(currHitObject.Points[0].Y - currHitObject.Y, currHitObject.Points[0].X - currHitObject.X);
-            float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
-            float timeDiff = (currentTime - currHitObject.Time) % duration;
-            int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
-            if (repeatNumber % 2 == 1)
-                timeDiff = duration - timeDiff;
-            float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
-            float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
-
-            GetCursorPos(out cursorPos);
-            velX = expectedX - cursorPos.X;
-            velY = expectedY - cursorPos.Y;
-        }
-
-        private void AutoPilotPerfectSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
-        {
-            Vec2Float midpt1 = new Vec2Float((currHitObject.X + currHitObject.Points[0].X) / 2f, (currHitObject.Y + currHitObject.Points[0].Y) / 2f);
-            Vec2Float midpt2 = new Vec2Float((currHitObject.Points[0].X + currHitObject.Points[1].X) / 2f, (currHitObject.Points[0].Y + currHitObject.Points[1].Y) / 2f);
-            Vec2Float norml1 = new Vec2Float(currHitObject.Points[0].X - currHitObject.X, currHitObject.Points[0].Y - currHitObject.Y).Normal();
-            Vec2Float norml2 = new Vec2Float(currHitObject.Points[1].X - currHitObject.Points[0].X, currHitObject.Points[1].Y - currHitObject.Points[0].Y).Normal();
-            Vec2Float center = Vec2Float.Intersect(midpt1, norml1, midpt2, norml2);
-
-            float startAngle = (float)Math.Atan2(currHitObject.Y - center.Y, currHitObject.X - center.X);
-            float midAngle = (float)Math.Atan2(currHitObject.Points[0].Y - center.Y, currHitObject.Points[0].X - center.X);
-            float endAngle = (float)Math.Atan2(currHitObject.Points[1].Y - center.Y, currHitObject.Points[1].X - center.X);
-
-            Func<float, float, float, bool> isInside = (a, b, c) => (b > a && b < c) || (b < a && b > c);
-            if (!isInside(startAngle, midAngle, endAngle))
-            {
-                if (Math.Abs(startAngle + TWO_PI - endAngle) < TWO_PI && isInside(startAngle + TWO_PI, midAngle, endAngle))
-                    startAngle += TWO_PI;
-                else if (Math.Abs(startAngle - (endAngle + TWO_PI)) < TWO_PI && isInside(startAngle, midAngle, endAngle + TWO_PI))
-                    endAngle += TWO_PI;
-                else if (Math.Abs(startAngle - TWO_PI - endAngle) < TWO_PI && isInside(startAngle - TWO_PI, midAngle, endAngle))
-                    startAngle -= TWO_PI;
-                else if (Math.Abs(startAngle - (endAngle - TWO_PI)) < TWO_PI && isInside(startAngle, midAngle, endAngle - TWO_PI))
-                    endAngle -= TWO_PI;
-            }
-
-            float radius = (float)Math.Sqrt(Math.Pow(currHitObject.X - center.X, 2) + Math.Pow(currHitObject.Y - center.Y, 2));
-            float arcAngle = (float)currHitObject.Length / radius;
-            endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
-
-            float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
-            float timeDiff = (currentTime - currHitObject.Time) % duration;
-            int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
-            if (repeatNumber % 2 == 1)
-                timeDiff = duration - timeDiff;
-
-            float currAngle = startAngle + (endAngle - startAngle) * timeDiff / duration;
-            float expectedX = (float)(center.X - currHitObject.X + radius * Math.Cos(currAngle)) * resConstants[0] + cursorPos2.X;
-            float expectedY = (float)(center.Y - currHitObject.Y + radius * Math.Sin(currAngle)) * resConstants[1] + cursorPos2.Y;
-            GetCursorPos(out cursorPos);
-            velX = expectedX - cursorPos.X;
-            velY = expectedY - cursorPos.Y;
-        }
-        */
 
         FPOINT prevPoint;
         bool test = false;
@@ -510,14 +444,15 @@ namespace osu_nhauto
 
             ellipseAngle = -1;
             float xDiff, yDiff;
+            float stackOffset = BeatmapUtils.CirclePxRadius / 10 * currHitObject.StackHeight;
             switch (lastHitObject.Type & (HitObjectType)0b1000_1011)
             {
                 case HitObjectType.Normal:
                 case HitObjectType.Slider:
                 case HitObjectType.Spinner:
                     GetCursorPos(out cursorPos);
-                    xDiff = currHitObject.X * resConstants[0] + resConstants[2] - cursorPos.X;
-                    yDiff = currHitObject.Y * resConstants[1] + resConstants[3] - cursorPos.Y;
+                    xDiff = (currHitObject.X - stackOffset) * resConstants[0] + resConstants[2] - cursorPos.X;
+                    yDiff = (currHitObject.Y - stackOffset) * resConstants[1] + resConstants[3] - cursorPos.Y;
                     break;
                 default:
                     xDiff = (currHitObject.X - lastHitObject.X) * resConstants[0];
@@ -553,7 +488,8 @@ namespace osu_nhauto
         private bool IsCursorOnCircle(HitObject currHitObject)
         {
             GetCursorPos(out cursorPos);
-            return (float)Math.Sqrt(Math.Pow(cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]), 2))
+            float stackOffset = BeatmapUtils.CirclePxRadius / 10 * currHitObject.StackHeight;
+            return (float)Math.Sqrt(Math.Pow(cursorPos.X - ((currHitObject.X - stackOffset) * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - ((currHitObject.Y - stackOffset) * resConstants[1] + resConstants[3]), 2))
                 <= BeatmapUtils.CirclePxRadius / 5;
         }
 
