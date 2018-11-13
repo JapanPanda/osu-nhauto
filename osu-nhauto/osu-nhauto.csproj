@@ -116,6 +116,7 @@
     <Compile Include="Memory.cs" />
     <Compile Include="Osu.cs" />
     <Compile Include="Player.cs" />
+    <Compile Include="ResolutionUtils.cs" />
     <Compile Include="StatusHandler.cs" />
     <Compile Include="Vec2Float.cs" />
     <Page Include="MainWindow.xaml">

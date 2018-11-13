@@ -9,7 +9,6 @@ using osu_database_reader.BinaryFiles;
 using osu_database_reader.Components.Beatmaps;
 using nhauto = osu_nhauto.HitObjects;
 using holly = osu_database_reader.Components.HitObjects;
-using osu_nhauto.HitObjects;
 
 namespace osu_nhauto {
 
@@ -59,7 +58,7 @@ namespace osu_nhauto {
 
         public void Parse()
         {
-            if (timingPoints != null && hitObjects != null && stackHeights != null)
+            if (timingPoints != null && hitObjects != null)
                 return;
 
             if (filePath == null)
@@ -142,9 +141,6 @@ namespace osu_nhauto {
 
             ApplyStacking(); // TODO check file format version < 6
 
-            for (int i = 0; i < hitObjects.Count; ++i)
-                Console.WriteLine(hitObjects[i].StackHeight);
-
             stopwatch.Stop();
             Console.WriteLine($"Elapsed time to parse beatmap: {stopwatch.ElapsedMilliseconds}ms");
         }
@@ -162,98 +158,50 @@ namespace osu_nhauto {
                 timePreempt += 600 * (5 - ApproachRate) / 5;
             float stackThreshold = timePreempt * StackLeniency;
 
-            /*
-            int finalIndex = hitObjects.Count - 1;
-            int extendedEndIndex = finalIndex;
-            for (int i = finalIndex; i >= 0; --i)
+            for (int i = hitObjects.Count - 1; i > 0; --i)
             {
-                int stackBaseInd = i;
-                for (int j = stackBaseInd + 1; j < hitObjects.Count; ++j)
-                {
-                    nhauto.HitObject stackBaseObj = hitObjects[stackBaseInd];
-                    if ((stackBaseObj.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
-                        break;
-
-                    nhauto.HitObject currHitObj = hitObjects[j];
-                    if ((currHitObj.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
-                        continue;
-
-                    int stackBaseEndTime = stackBaseObj.Time; // TODO remove assumption of circle
-                    if (currHitObj.Time - stackBaseEndTime > stackThreshold)
-                        break;
-
-                    if (Math.Sqrt(Math.Pow(stackBaseObj.X - currHitObj.X, 2) + Math.Pow(stackBaseObj.Y - currHitObj.Y, 2)) < 3 ||
-                        (stackBaseObj.Type & (HitObjectType)0b1000_1011) == HitObjectType.Slider) // TODO calculate end position
-                    {
-                        stackBaseInd = j;
-                        stackHeightsTemp[j] = 0;
-                    }
-                }
-
-                if (stackBaseInd > extendedEndIndex)
-                {
-                    extendedEndIndex = stackBaseInd;
-                    if (extendedEndIndex == finalIndex)
-                        break;
-                }
-            }
-            */
-
-            const int STACK_LENIENCE = 3;
-            for (int i = hitObjects.Count - 1; i > 0; i--)
-            {
-                int n = i;
-                HitObject objectI = hitObjects[i];
+                nhauto.HitObject objectI = hitObjects[i];
                 if (objectI.StackHeight != 0 || objectI.Type == HitObjectType.Spinner)
                     continue;
 
-                if (objectI.Type == HitObjectType.Normal)
+                Vec2Float objectIPosVec = new Vec2Float(objectI.X, objectI.Y);
+                for (int n = i; --n >= 0;)
                 {
-                    while (--n >= 0)
+                    nhauto.HitObject objectN = hitObjects[n];
+                    if (objectN.Type == HitObjectType.Spinner)
+                        continue;
+
+                    if (objectI.Time - objectN.EndTime > stackThreshold)
+                        break;
+
+                    if (objectI.Type == HitObjectType.Normal)
                     {
-                        HitObject objectN = hitObjects[n];
-                        if (objectN.Type == HitObjectType.Spinner)
-                            continue;
-
-                        if (objectI.Time - objectN.EndTime > stackThreshold)
-                            break;
-
                         if (objectN.Type == HitObjectType.Slider)
                         {
-                            HitObjectSlider sliderN = objectN as HitObjectSlider;
-                            Vec2Float endPosition = sliderN.GetPointAt(sliderN.EndTime);
-                            if (Math.Sqrt(Math.Pow(sliderN.X + endPosition.X - objectI.X, 2) + Math.Pow(sliderN.Y + endPosition.Y - objectI.Y, 2)) < STACK_LENIENCE)
+                            nhauto.HitObjectSlider sliderN = objectN as nhauto.HitObjectSlider;
+                            Vec2Float endPosition = sliderN.GetPosition(sliderN.EndTime);
+                            if (endPosition.Distance(objectIPosVec) < STACK_LENIENCE)
                             {
                                 int offset = objectI.StackHeight - objectN.StackHeight + 1;
                                 for (int j = n + 1; j <= i; j++)
                                 {
-                                    if (Math.Sqrt(Math.Pow(sliderN.X + endPosition.X - hitObjects[j].X, 2) + Math.Pow(sliderN.Y + endPosition.Y - hitObjects[j].Y, 2)) < STACK_LENIENCE)
+                                    if (endPosition.Distance(hitObjects[j].X, hitObjects[j].Y) < STACK_LENIENCE)
                                         hitObjects[j].StackHeight -= offset;
                                 }
                                 break;
                             }
                         }
 
-                        if (Math.Sqrt(Math.Pow(objectN.X - objectI.X, 2) + Math.Pow(objectN.Y - objectI.Y, 2)) < STACK_LENIENCE)
+                        if (objectIPosVec.Distance(objectN.X, objectN.Y) < STACK_LENIENCE)
                         {
                             objectN.StackHeight = objectI.StackHeight + 1;
                             objectI = objectN;
                         }
                     }
-                }
-                else if (objectI.Type == HitObjectType.Slider)
-                {
-                    while (--n >= 0)
+                    else
                     {
-                        HitObject objectN = hitObjects[n];
-                        if (objectN.Type == HitObjectType.Spinner)
-                            continue;
-
-                        if (objectI.Time - objectN.EndTime > stackThreshold)
-                            break;
-
-                        Vec2Float endPosition = objectN.Type == HitObjectType.Slider ? (objectN as HitObjectSlider).GetPointAt(objectN.EndTime) : new Vec2Float(0, 0);
-                        if (Math.Sqrt(Math.Pow(objectN.X + endPosition.X - objectI.X, 2) + Math.Pow(objectN.Y + endPosition.Y - objectI.Y, 2)) < STACK_LENIENCE)
+                        Vec2Float endPosition = objectN.Type == HitObjectType.Slider ? (objectN as nhauto.HitObjectSlider).GetPosition(objectN.EndTime) : new Vec2Float(objectN.X, objectN.Y);
+                        if (endPosition.Distance(objectIPosVec) < STACK_LENIENCE)
                         {
                             objectN.StackHeight = objectI.StackHeight + 1;
                             objectI = objectN;
@@ -261,11 +209,18 @@ namespace osu_nhauto {
                     }
                 }
             }
+
+            float stackOffset = (54.4f - 4.48f * CircleSize) / 10f;
+            for (int i = 0; i < hitObjects.Count; ++i)
+            {
+                nhauto.HitObject hitObj = hitObjects[i];
+                hitObj.X -= (int)(stackOffset * hitObj.StackHeight);
+                hitObj.Y -= (int)(stackOffset * hitObj.StackHeight);
+            }
         }
 
         public ReadOnlyCollection<TimingPoint> GetTimingPoints() => timingPoints;
         public ReadOnlyCollection<nhauto.HitObject> GetHitObjects() => hitObjects;
-        public ReadOnlyCollection<int> GetStackHeights() => stackHeights;
 
         public float CircleSize { get; private set; }
         public float ApproachRate { get; private set; }
@@ -277,6 +232,7 @@ namespace osu_nhauto {
         private string filePath = null;
         private ReadOnlyCollection<TimingPoint> timingPoints = null;
         private ReadOnlyCollection<nhauto.HitObject> hitObjects = null;
-        private ReadOnlyCollection<int> stackHeights = null;
+
+        private const int STACK_LENIENCE = 3;
     }
 }

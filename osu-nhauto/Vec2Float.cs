@@ -39,6 +39,10 @@ namespace osu_nhauto
             return this;
         }
 
+        public float Distance(float x, float y) => (float)Math.Sqrt(Math.Pow(X - x, 2) + Math.Pow(Y - y, 2));
+
+        public float Distance(Vec2Float v) => Distance(v.X, v.Y);
+
         public Vec2Float Clone() => new Vec2Float(X, Y);
 
         public static Vec2Float Intersect(Vec2Float a, Vec2Float da, Vec2Float b, Vec2Float db)

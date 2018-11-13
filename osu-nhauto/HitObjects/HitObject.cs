@@ -4,8 +4,8 @@ namespace osu_nhauto.HitObjects
 {
     public abstract class HitObject
     {
-        public int X { get; private set; }
-        public int Y { get; private set; }
+        public int X { get; set; }
+        public int Y { get; set; }
         public int Time { get; private set; }
         public int EndTime { get; protected set; }
         public int StackHeight { get; set; }
