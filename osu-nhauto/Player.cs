@@ -4,9 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using WindowsInput;
 using osu.Shared;
-using osu_database_reader.Components;
+using osu_database_reader;
 using osu_database_reader.Components.Beatmaps;
-using osu_database_reader.Components.HitObjects;
+using osu_nhauto.HitObjects;
 
 namespace osu_nhauto
 {
@@ -66,15 +66,12 @@ namespace osu_nhauto
         public void Update()
         {
             //Mods timeMod = osuClient.GetTimeMod();
+            BeatmapUtils.InitializeBeatmap(beatmap);
             bool continueRunning = false;
             int nextTimingPtIndex = 0, nextHitObjIndex = 0;
-            TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
+            TimingPoint nextTimingPt = BeatmapUtils.GetNextTimingPoint(ref nextTimingPtIndex);
             HitObject lastHitObject = null;
             HitObject currHitObject = beatmap.GetHitObjects()[0];
-            //HitObject nextHitObject = beatmap.GetHitObjects()[1];
-            msPerQuarter = beatmap.GetTimingPoints()[0].MsPerQuarter;
-            circlePxSize = (float)(54.4 - 4.48 * beatmap.CircleSize);
-            speedVelocity = 1;
             bool shouldPressSecondary = false;
             int lastTime = osuClient.GetAudioTime();
             float velX = 0, velY = 0;
@@ -88,9 +85,9 @@ namespace osu_nhauto
                     lastTime = currentTime;
                     if (nextTimingPt != null && currentTime >= nextTimingPt.Time)
                     {
-                        UpdateTimingSettings();
+                        BeatmapUtils.UpdateTimingSettings();
                         ++nextTimingPtIndex;
-                        nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
+                        nextTimingPt = BeatmapUtils.GetNextTimingPoint(ref nextTimingPtIndex);
                     }
                     if (currHitObject != null)
                     {
@@ -112,15 +109,11 @@ namespace osu_nhauto
                                 lastHitObject = currHitObject;
                             }
 
-                            if (currentTime >= GetHitObjectEndTime(currHitObject) + 3)
+                            if (currentTime >= currHitObject.EndTime + 3)
                             {
                                 currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-
                                 if (currHitObject != null)
-                                {
                                     GetVelocities(currHitObject, lastHitObject, ref velX, ref velY);
-                                    //Console.WriteLine("New Vel: {0} x {1}", velX, velY);
-                                }
                             }
                             /*
                             if (osuClient.IsAudioPlaying() == 0)
@@ -162,8 +155,8 @@ namespace osu_nhauto
 
             if (IsCursorOnCircle(currHitObject))
             {
-                velX *= 0.025f;
-                velY *= 0.025f;
+                velX *= 0.01f;
+                velY *= 0.01f;
                 return;
             }
 
@@ -171,7 +164,7 @@ namespace osu_nhauto
             float yDiff = cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
-                float dist = Math.Abs(f) - circlePxSize / 1.2f;
+                float dist = Math.Abs(f) - BeatmapUtils.CirclePxRadius;
                 if (dist >= 40)
                     return 3.7f; // 3.7
                 if (dist >= 25)
@@ -221,10 +214,11 @@ namespace osu_nhauto
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
 
+        /*
         private void AutoPilotLinearSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
         {
             float angle = (float)Math.Atan2(currHitObject.Points[0].Y - currHitObject.Y, currHitObject.Points[0].X - currHitObject.X);
-            float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+            float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
             float timeDiff = (currentTime - currHitObject.Time) % duration;
             int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
             if (repeatNumber % 2 == 1)
@@ -235,18 +229,6 @@ namespace osu_nhauto
             GetCursorPos(out cursorPos);
             velX = expectedX - cursorPos.X;
             velY = expectedY - cursorPos.Y;
-
-            /*
-            if (currHitObject.RepeatCount > 1)
-            {
-                //int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
-                if (repeatNumber % 2 == 1)
-                {
-                    velX *= -1;
-                    velY *= -1;
-                }
-            }
-            */
         }
 
         private void AutoPilotPerfectSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
@@ -278,7 +260,7 @@ namespace osu_nhauto
             float arcAngle = (float)currHitObject.Length / radius;
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
 
-            float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+            float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
             float timeDiff = (currentTime - currHitObject.Time) % duration;
             int repeatNumber = (int)((currentTime - currHitObject.Time) / duration);
             if (repeatNumber % 2 == 1)
@@ -291,6 +273,7 @@ namespace osu_nhauto
             velX = expectedX - cursorPos.X;
             velY = expectedY - cursorPos.Y;
         }
+        */
 
         FPOINT prevPoint;
         bool test = false;
@@ -319,10 +302,10 @@ namespace osu_nhauto
                 currBezPoint = GetBezierPoint(currHitObject, currStep);
                 float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
                 float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
-                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+                float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
                 float timeDiff = (0.01f * duration) % duration;
-                float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
+                float expectedX = (float)(currHitObject.PixelLength * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(currHitObject.PixelLength * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
 
                 GetCursorPos(out cursorPos);
                 velX = expectedX - cursorPos.X;
@@ -337,10 +320,10 @@ namespace osu_nhauto
                 currBezPoint = GetBezierPoint(currHitObject, currStep);
                 float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
                 float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
-                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+                float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
                 float timeDiff = (0.01f * duration) % duration;
-                float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
+                float expectedX = (float)(currHitObject.PixelLength * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(currHitObject.PixelLength * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
 
                 GetCursorPos(out cursorPos);
                 velX = expectedX - cursorPos.X;
@@ -352,7 +335,7 @@ namespace osu_nhauto
             else
             {
                 float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
-                float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
+                float duration = (float)BeatmapUtils.CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
                 float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
 
                 float timeDiff = (0.01f * duration) % duration;
@@ -408,19 +391,25 @@ namespace osu_nhauto
             else
             {
                 HitObjectSlider currSlider = currHitObject as HitObjectSlider;
-                switch (currSlider.CurveType)
+                Vec2Float pos = currSlider.GetPointAt(currentTime);
+                GetCursorPos(out cursorPos);
+                velX = pos.X * resConstants[0] + cursorPos2.X - cursorPos.X;
+                velY = pos.Y * resConstants[1] + cursorPos2.Y - cursorPos.Y;
+                /*
+                switch (currSlider.Curve)
                 {
-                    case osu_database_reader.CurveType.Linear:
+                    case CurveType.Linear:
                         AutoPilotLinearSlider(currSlider, ref velX, ref velY);
                         break;
-                    case osu_database_reader.CurveType.Perfect:
+                    case CurveType.Perfect:
                         AutoPilotPerfectSlider(currSlider, ref velX, ref velY);
                         break;
-                    case osu_database_reader.CurveType.Catmull:
-                    case osu_database_reader.CurveType.Bezier:
+                    case CurveType.Catmull:
+                    case CurveType.Bezier:
                         AutoPilotBezierSlider(currSlider, ref velX, ref velY);
                         break;
                 }
+                */
             }
         }
 
@@ -462,73 +451,17 @@ namespace osu_nhauto
 
         private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, ref int nextHitObjIndex)
         {
-            shouldPressSecondary = GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
+            shouldPressSecondary = BeatmapUtils.GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
             keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
             //Thread.Sleep(2);
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay(GetHitObjectEndTime(currHitObject) - currHitObject.Time + 16).ContinueWith(ant =>
+            Task.Delay(currHitObject.EndTime - currHitObject.Time + 16).ContinueWith(ant =>
             {
                 inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
                 if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
                     keyPressed = KeyPressed.None;
             });
-        }
-
-        private int CalculateSliderDuration(HitObjectSlider obj) =>
-            (int)Math.Ceiling(obj.Length * obj.RepeatCount / (100 * beatmap.SliderVelocity * speedVelocity / msPerQuarter));
-
-        private TimingPoint GetNextTimingPoint(ref int index)
-        {
-            if (index >= beatmap.GetTimingPoints().Count)
-                return null;
-
-            for (; index < beatmap.GetTimingPoints().Count; ++index)
-            {
-                TimingPoint next = beatmap.GetTimingPoints()[index];
-                TimingPoint after = index + 1 >= beatmap.GetTimingPoints().Count ? null : beatmap.GetTimingPoints()[index + 1];
-
-                if (next.MsPerQuarter > 0)
-                {
-                    nextTimings[0] = next.MsPerQuarter;
-                    nextTimings[1] = 1;
-                }
-                else if (next.MsPerQuarter < 0)
-                    nextTimings[1] = -100 / next.MsPerQuarter;
-
-                if (after == null || after.Time > next.Time)
-                    return next;
-            }
-            return null;
-        }
-
-        private void UpdateTimingSettings()
-        {
-            msPerQuarter = nextTimings[0];
-            speedVelocity = nextTimings[1];
-        }
-
-        private int GetTimeDiffFromNextObj(HitObject hitObj)
-        {
-            int index = beatmap.GetHitObjects().IndexOf(hitObj);
-            if (index >= beatmap.GetHitObjects().Count - 1)
-                return int.MaxValue;
-
-            return beatmap.GetHitObjects()[index + 1].Time - GetHitObjectEndTime(hitObj);
-        }
-
-        private int GetHitObjectEndTime(HitObject hitObj)
-        {
-            int startTime = hitObj.Time;
-            switch (hitObj.Type & (HitObjectType)0b1000_1011)
-            {
-                case HitObjectType.Slider:
-                    return startTime + CalculateSliderDuration(hitObj as HitObjectSlider);
-                case HitObjectType.Spinner:
-                    return (hitObj as HitObjectSpinner).EndTime;
-                default:
-                    return startTime;
-            }
         }
 
         private float[] CalculatePlayfieldResolution()
@@ -613,7 +546,7 @@ namespace osu_nhauto
         {
             GetCursorPos(out cursorPos);
             return (float)Math.Sqrt(Math.Pow(cursorPos.X - (currHitObject.X * resConstants[0] + resConstants[2]), 2) + Math.Pow(cursorPos.Y - (currHitObject.Y * resConstants[1] + resConstants[3]), 2))
-                <= circlePxSize / 2;
+                <= BeatmapUtils.CirclePxRadius / 5;
         }
 
         public void ToggleAutoPilot() => autopilotRunning = !autopilotRunning;
@@ -632,24 +565,18 @@ namespace osu_nhauto
         private char key2 = 'X';
         private bool autopilotRunning = false;
         private bool relaxRunning = false;
-        private double msPerQuarter = 1000;
-        private double speedVelocity = 1;
         private double ellipseAngle = 0;
-        private double[] nextTimings = new double[2];
         private InputSimulator inputSimulator = new InputSimulator();
         private CurrentBeatmap beatmap;
-        private HitObjectSlider[] sliders;
         private POINT cursorPos, cursorPos2 = new POINT(-1, -1);
         private POINT center;
         private Osu osuClient;
         private float missingX, missingY;
-        private float circlePxSize;
         private float[] resConstants;
         private int currentTime;
         private KeyPressed keyPressed = KeyPressed.None;
 
         private const double ANGLE_INCREMENT = Math.PI / 18;
-        private const float HALF_PI = (float)Math.PI / 2;
         private const float TWO_PI = 2 * (float)Math.PI;
     }
 }

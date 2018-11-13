@@ -105,7 +105,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="BeatmapUtils.cs" />
     <Compile Include="CurrentBeatmap.cs" />
+    <Compile Include="HitObjects\HitObjectCircle.cs" />
+    <Compile Include="HitObjects\HitObjectSlider.cs" />
+    <Compile Include="HitObjects\HitObjectSliderBezier.cs" />
+    <Compile Include="HitObjects\HitObjectSliderLinear.cs" />
+    <Compile Include="HitObjects\HitObjectSliderPerfect.cs" />
+    <Compile Include="HitObjects\HitObjectSpinner.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="Osu.cs" />
     <Compile Include="Player.cs" />
@@ -143,6 +150,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <Compile Include="HitObjects\HitObject.cs" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
