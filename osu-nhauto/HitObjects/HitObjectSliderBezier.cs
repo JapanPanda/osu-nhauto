@@ -11,7 +11,7 @@ namespace osu_nhauto.HitObjects
 
         }
 
-        public override Vec2Float GetOffset(int currentTime)
+        public override Vec2Float GetPointAt(int currentTime)
         {
             return new Vec2Float(0, 0);
         }

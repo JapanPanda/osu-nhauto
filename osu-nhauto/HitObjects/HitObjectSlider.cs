@@ -77,8 +77,6 @@ namespace osu_nhauto.HitObjects
             return timeDiff;
         }
 
-        public Vec2Float GetPosition(int currentTime) => GetOffset(currentTime).Clone().Add(X, Y);
-
-        public abstract Vec2Float GetOffset(int currentTime);
+        public abstract Vec2Float GetPointAt(int currentTime);
     }
 }
