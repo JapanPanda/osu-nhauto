@@ -66,6 +66,7 @@ namespace osu_nhauto
         public void Update()
         {
             //Mods timeMod = osuClient.GetTimeMod();
+            currStep = 0;
             bool continueRunning = false;
             int nextTimingPtIndex = 0, nextHitObjIndex = 0;
             TimingPoint nextTimingPt = GetNextTimingPoint(ref nextTimingPtIndex);
@@ -115,7 +116,7 @@ namespace osu_nhauto
                             if (currentTime >= GetHitObjectEndTime(currHitObject) + 3)
                             {
                                 currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-
+                                currStep = 0;
                                 if (currHitObject != null)
                                 {
                                     GetVelocities(currHitObject, lastHitObject, ref velX, ref velY);
@@ -286,12 +287,13 @@ namespace osu_nhauto
             velX = expectedX - cursorPos.X;
             velY = expectedY - cursorPos.Y;
         }
-
-        FPOINT prevPoint;
+        
         bool test = false;
+        bool test2 = false;
         float currStep = 0;
         FPOINT currBezPoint;
         FPOINT prevBezPoint;
+        int prevTime;
         private void AutoPilotBezierSlider(HitObjectSlider currHitObject, ref float velX, ref float velY)
         {
             // Calculation of points in bezier slider
@@ -305,73 +307,99 @@ namespace osu_nhauto
                 }
                 test = true;
             }
-            
+            if (test2)
+                return;
             if (currStep == 0)
             {
-                Console.WriteLine("Initialize Bezier Point");
-                prevBezPoint.X = currHitObject.X;
-                prevBezPoint.Y = currHitObject.Y;
+                prevBezPoint = GetBezierPoint(currHitObject, currStep);
+                currStep += 0.01f;
                 currBezPoint = GetBezierPoint(currHitObject, currStep);
+
+                Console.WriteLine($"Initialize: {currStep}: {currBezPoint.X} x {currBezPoint.Y} || {prevBezPoint.X} x {prevBezPoint.Y}");
                 float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
                 float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
                 float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
                 float timeDiff = (0.01f * duration) % duration;
-                float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
+                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
 
                 GetCursorPos(out cursorPos);
                 velX = expectedX - cursorPos.X;
                 velY = expectedY - cursorPos.Y;
-                currStep += 0.01f;
-
+                prevTime = currentTime;
             }
-            else if (cursorPos.X >= currBezPoint.X - 15 && cursorPos.X <= currBezPoint.X + 15 && cursorPos.Y >= currBezPoint.Y - 15 && cursorPos.Y <= currBezPoint.Y + 15)
+            else if (cursorPos.X >= (currBezPoint.X) * resConstants[0] + resConstants[2] - 20 && (cursorPos.X <= (currBezPoint.X) * resConstants[0] + resConstants[2] + 20)
+                && cursorPos.Y >= (currBezPoint.Y) * resConstants[1] + resConstants[3] - 20 && cursorPos.Y <= (currBezPoint.Y) * resConstants[1] + resConstants[3] + 20)
             {
-                Console.WriteLine("New Bezier Point");
+                currStep += 0.01f;
                 prevBezPoint = currBezPoint;
                 currBezPoint = GetBezierPoint(currHitObject, currStep);
-                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
+
+                cursorPos2.X = cursorPos.X;
+                cursorPos2.Y = cursorPos.Y;
+                GetCursorPos(out cursorPos);
+                Console.WriteLine($"New Bezier Point: {currStep}: {currBezPoint.X} x {currBezPoint.Y}");
+                Console.WriteLine($"NEW!!! {cursorPos.X} x {cursorPos.Y} || {cursorPos2.X} x {cursorPos2.Y} || {(currBezPoint.X) * resConstants[0] + resConstants[2]} x {(currBezPoint.Y) * resConstants[1] + resConstants[3]}");
                 float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
                 float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
-                float timeDiff = (0.01f * duration) % duration;
-                float expectedX = (float)(currHitObject.Length * Math.Cos(angle) * timeDiff / duration) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(currHitObject.Length * Math.Sin(angle) * timeDiff / duration) * resConstants[1] + cursorPos2.Y;
+                float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
+
+                float timeDiff = (currentTime - prevTime) % duration;
+                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
 
                 GetCursorPos(out cursorPos);
                 velX = expectedX - cursorPos.X;
                 velY = expectedY - cursorPos.Y;
-                currStep += 0.01f;
-
+                prevTime = currentTime;
                 Console.WriteLine($"Expected: {expectedX} x {expectedY}");
             }
             else
             {
+                if (currStep > 1)
+                {
+                    return;
+                }
+
                 float angle = (float)Math.Atan2(currBezPoint.Y - prevBezPoint.Y, currBezPoint.X - prevBezPoint.X);
                 float duration = (float)CalculateSliderDuration(currHitObject) / currHitObject.RepeatCount;
                 float distance = (float)Math.Sqrt(Math.Pow(currBezPoint.Y - prevBezPoint.Y, 2) + Math.Pow(currBezPoint.X - prevBezPoint.X, 2));
 
-                float timeDiff = (0.01f * duration) % duration;
-                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.1f * duration)) * resConstants[0] + cursorPos2.X;
-                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.1f * duration)) * resConstants[1] + cursorPos2.Y;
-
+                
+                float timeDiff = (currentTime - prevTime) % duration;
+                float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration)) * resConstants[0] + cursorPos2.X;
+                float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration)) * resConstants[1] + cursorPos2.Y;
+                
                 GetCursorPos(out cursorPos);
                 velX = expectedX - cursorPos.X;
                 velY = expectedY - cursorPos.Y;
-
+                Console.WriteLine($"{cursorPos.X} x {cursorPos.Y} || {(currBezPoint.X) * resConstants[0] + resConstants[2]} x {(currBezPoint.Y) * resConstants[1] + resConstants[3]}");
+                Console.WriteLine($"Expected: {expectedX} x {expectedY}");
                 //Console.WriteLine($"Distance: {currBezPoint.X} x {currBezPoint.Y} || {prevBezPoint.X} x {prevBezPoint.Y} = {distance}");
-                //Console.WriteLine($"Velocity: {velX} x {velY}");
+                
             }
+            Console.WriteLine($"Velocity: {velX} x {velY}");
 
         }
 
         private FPOINT GetBezierPoint(HitObjectSlider currHitObject, float step)
         {
             FPOINT point = new FPOINT();
-            int points = currHitObject.Points.Count - 1;
-            for (int i = 0; i <= points; i++)
+            int points = currHitObject.Points.Count;
+            //point.X = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points - 0) * Math.Pow(step, 0) * currHitObject.X);
+            //point.Y = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points - 0) * Math.Pow(step, 0) * currHitObject.Y);
+            //for (int i = 0; i <= points; i++)
+            //{
+            //    point.X += (float)(GetBinomialCoefficient(points, i + 1) * Math.Pow(1 - step, points - i - 1) * Math.Pow(step, i - 1) * currHitObject.Points[i].X);
+            //    point.Y += (float)(GetBinomialCoefficient(points, i + 1) * Math.Pow(1 - step, points - i - 1) * Math.Pow(step, i - 1) * currHitObject.Points[i].Y);
+            //}
+            point.X = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points - 0) * Math.Pow(step, 0) * currHitObject.X);
+            point.Y = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points - 0) * Math.Pow(step, 0) * currHitObject.Y);
+            for (int i = 0; i <= points - 1; i++)
             {
-                point.X += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * currHitObject.Points[i].X);
-                point.Y += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * currHitObject.Points[i].Y);
+                point.X += (float)(GetBinomialCoefficient(points, i + 1) * Math.Pow(1 - step, points - i - 1) * Math.Pow(step, i + 1) * currHitObject.Points[i].X);
+                point.Y += (float)(GetBinomialCoefficient(points, i + 1) * Math.Pow(1 - step, points - i - 1) * Math.Pow(step, i + 1) * currHitObject.Points[i].Y);
+                
             }
             //point.X = (1 - step) * (1 - step) * (1 - step) * currHitObject.Points[0].X + 3 * (1 - step) * (1 - step) * step * currHitObject.Points[1].X + 3 * (1 - step) * step * step * currHitObject.Points[2].X + step * step * step * currHitObject.Points[3].X;
             return point;
