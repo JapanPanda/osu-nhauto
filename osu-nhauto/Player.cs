@@ -13,10 +13,6 @@ namespace osu_nhauto
 
     public class Player
     {
-        [DllImport("user32.dll", EntryPoint = "SetCursorPos")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetCursorPos(int X, int Y);
-
         [DllImport("user32.dll", EntryPoint = "mouse_event", CallingConvention = CallingConvention.Winapi)]
         internal static extern void Mouse_Event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
@@ -103,14 +99,6 @@ namespace osu_nhauto
                                 if (currHitObject != null)
                                     GetVelocities(currHitObject, lastHitObject, ref velX, ref velY);
                             }
-                            /*
-                            if (osuClient.IsAudioPlaying() == 0)
-                            {
-                                continueRunning = true;
-                                Thread.Sleep(1500);
-                                break;
-                            }
-                            */
                         }
                     }
                     else
@@ -121,8 +109,6 @@ namespace osu_nhauto
                 else if (currentTime < lastTime - 3)
                 {
                     Console.WriteLine($"Detected possible reset: curr={currentTime} last={lastTime}");
-                    if (lastTime - currentTime > 100)
-                        Console.WriteLine("False positive");
                     continueRunning = true;
                     break;
                 }
@@ -198,10 +184,11 @@ namespace osu_nhauto
 
             float x = (center.X + (float)(dist * Math.Cos(ellipseAngle))) * 65535 / 1920;
             float y = (center.Y + (float)(dist * Math.Sin(ellipseAngle))) * 65535 / 1080;
-            if (dist >= 100)
+            if (dist != 100)
             {
-                x -= (float)(50 * Math.Cos(ellipseAngle));
-                y -= (float)(50 * Math.Sin(ellipseAngle));
+                int sign = Math.Sign(100 - dist);
+                x += (float)(50 * Math.Cos(ellipseAngle)) * sign;
+                y += (float)(50 * Math.Sin(ellipseAngle)) * sign;
             }
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
@@ -216,17 +203,10 @@ namespace osu_nhauto
             else
             {
                 HitObjectSlider currSlider = currHitObject as HitObjectSlider;
-                if (currSlider.Curve == CurveType.Bezier)
-                {
-                    HitObjectSliderBezier bezierSlider = currSlider as HitObjectSliderBezier;
-                    bezierSlider.CheckForUpdate(cursorPos, ref cursorPos2, currentTime);
-                }
                 Vec2Float pos = currSlider.GetOffset(currentTime);
                 GetCursorPos(out cursorPos);
                 velX = pos.X * ResolutionUtils.Ratio.X + cursorPos2.X - cursorPos.X;
                 velY = pos.Y * ResolutionUtils.Ratio.Y + cursorPos2.Y - cursorPos.Y;
-                
-
             }
         }
 
