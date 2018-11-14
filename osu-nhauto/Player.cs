@@ -93,6 +93,12 @@ namespace osu_nhauto
 
                             if (currentTime >= currHitObject.EndTime + 3)
                             {
+                                Osu.SCORE_DATA? scoreData = osuClient.GetScoreData();
+                                if (scoreData != null)
+                                {
+                                    Osu.SCORE_DATA fscoreData = scoreData.Value;
+                                    Console.WriteLine($"300s: {fscoreData.score_300} 100s: {fscoreData.score_100} 50s: {fscoreData.score_50} 0s: {fscoreData.score_0} Score: {fscoreData.current_score} Combo: {fscoreData.current_combo}");
+                                }
                                 currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
                                 if (currHitObject != null)
                                     GetVelocities(currHitObject, lastHitObject, ref velX, ref velY);

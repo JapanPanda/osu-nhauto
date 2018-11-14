@@ -101,12 +101,14 @@ namespace osu_nhauto.HitObjects
             {
                 return;
             } 
-            if (cursorPos.X >= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) - 20 && (cursorPos.X <= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) + 20)
-                && cursorPos.Y >= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) - 20 && cursorPos.Y <= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) + 20)
+            if (cursorPos.X >= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) - 10 && (cursorPos.X <= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) + 10)
+                && cursorPos.Y >= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) - 10 && cursorPos.Y <= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) + 10)
             {
                 cursorPos2.X = cursorPos.X;
                 cursorPos2.Y = cursorPos.Y;
                 currStep += 0.015f;
+                if (currStep > 1)
+                    currStep = 1;
                 prevBezPoint = currBezPoint;
                 currBezPoint = GetBezierPoint(currStep);
                 prevTime = currentTime;

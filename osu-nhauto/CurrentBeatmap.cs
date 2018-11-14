@@ -71,7 +71,7 @@ namespace osu_nhauto {
             ModValue = MainWindow.osu.GetModValue();
             if (!ModValue.HasValue)
                 Console.WriteLine("WARNING: Mod value not found. Assuming NoMod.");
-
+            
             bool shouldVInvert = ModValue.HasValue && (ModValue.Value & (int)Mods.HardRock) > 0;
             List<TimingPoint> timingPtsTemp = new List<TimingPoint>();
             List<nhauto.HitObject> hitObjsTemp = new List<nhauto.HitObject>();
