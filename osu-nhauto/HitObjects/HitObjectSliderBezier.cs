@@ -20,7 +20,7 @@ namespace osu_nhauto.HitObjects
         }
 
         public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
-            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints) : base(hollyObj, sliderVelocity, timingPoints)
+            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
 
         }
@@ -36,10 +36,10 @@ namespace osu_nhauto.HitObjects
             // Calculation of points in bezier slider
             if (!test)
             {
-                for (float i = 0; i <= 1; i += 0.01f)
+                for (float i = 0; i <= 1; i += 0.015f)
                 {
                     Vec2Float test = GetBezierPoint(i);
-                    Console.WriteLine($"{test.X} x {test.Y}");
+                    //Console.WriteLine($"{test.X} x {test.Y}");
 
                 }
                 test = true;
@@ -54,7 +54,7 @@ namespace osu_nhauto.HitObjects
                 currStep += 0.015f;
                 currBezPoint = GetBezierPoint(currStep);
                 Console.WriteLine($"Initialize: {currStep}: {currBezPoint.X} x {currBezPoint.Y} || {prevBezPoint.X} x {prevBezPoint.Y}");
-                timeDiff = (0.01f * duration) % duration;
+                timeDiff = (0.015f * duration) % duration;
                 prevTime = currentTime;
             }
             else

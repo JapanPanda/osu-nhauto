@@ -63,6 +63,8 @@ namespace osu_nhauto
             int lastTime = osuClient.GetAudioTime();
             float velX = 0, velY = 0;
             ResolutionUtils.CalculatePlayfieldResolution();
+            speedMod = GetSpeedModifier();
+            timeDiffThreshold *= speedMod;
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 currentTime = osuClient.GetAudioTime() + 6;
@@ -85,7 +87,7 @@ namespace osu_nhauto
                         {
                             if (currHitObject != lastHitObject)
                             {
-                                Relax(currHitObject, ref shouldPressSecondary, ref nextHitObjIndex);
+                                Relax(currHitObject, lastHitObject, ref shouldPressSecondary, ref nextHitObjIndex);
                                 lastHitObject = currHitObject;
                             }
 
@@ -110,8 +112,11 @@ namespace osu_nhauto
 
                     Thread.Sleep(1);
                 }
-                else if (currentTime < lastTime)
+                else if (currentTime < lastTime - 3)
                 {
+                    Console.WriteLine($"Detected possible reset: curr={currentTime} last={lastTime}");
+                    if (lastTime - currentTime > 100)
+                        Console.WriteLine("False positive");
                     continueRunning = true;
                     break;
                 }
@@ -255,14 +260,14 @@ namespace osu_nhauto
             Mouse_Event(0x1, (int)velX, (int)velY, 0, 0);
         }
 
-        private void Relax(HitObject currHitObject, ref bool shouldPressSecondary, ref int nextHitObjIndex)
+        private void Relax(HitObject currHitObject, HitObject lastHitObject, ref bool shouldPressSecondary, ref int nextHitObjIndex)
         {
-            shouldPressSecondary = BeatmapUtils.GetTimeDiffFromNextObj(currHitObject) < 116 ? !shouldPressSecondary : false;
+            shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < timeDiffThreshold ? !shouldPressSecondary : false;
             keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
             //Thread.Sleep(2);
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay(currHitObject.EndTime - currHitObject.Time + 16).ContinueWith(ant =>
+            Task.Delay((int)((currHitObject.EndTime - currHitObject.Time) / speedMod) + 16).ContinueWith(ant =>
             {
                 inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
                 if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
@@ -306,8 +311,8 @@ namespace osu_nhauto
                 return 7.1f; // 8.2
             });
             float dist = (float)Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
-            velX *= applyVelocityFactor(dist);
-            velY *= applyVelocityFactor(dist);
+            velX *= applyVelocityFactor(dist) * speedMod;
+            velY *= applyVelocityFactor(dist) * speedMod;
         }
 
         private bool IsCursorOnCircle(HitObject currHitObject)
@@ -315,6 +320,23 @@ namespace osu_nhauto
             GetCursorPos(out cursorPos);
             return (float)Math.Sqrt(Math.Pow(cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(currHitObject.X), 2) + Math.Pow(cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y), 2))
                 <= BeatmapUtils.CirclePxRadius / 5;
+        }
+
+        private float GetSpeedModifier()
+        {
+            if (!beatmap.ModValue.HasValue)
+                return 1;
+            if ((beatmap.ModValue.Value & (int)(Mods.DoubleTime | Mods.Nightcore)) > 0)
+            {
+                Console.WriteLine("Detected DoubleTime");
+                return 1.5f;
+            }
+            if ((beatmap.ModValue.Value & (int)Mods.HalfTime) > 0)
+            {
+                Console.WriteLine("Detected HalfTime");
+                return 0.75f;
+            }
+            return 1;
         }
 
         public void ToggleAutoPilot() => autopilotRunning = !autopilotRunning;
@@ -339,6 +361,8 @@ namespace osu_nhauto
         private POINT cursorPos, cursorPos2 = new POINT(-1, -1);
         private Osu osuClient;
         private float missingX, missingY;
+        private float speedMod = 1;
+        private float timeDiffThreshold = 116;
         private int currentTime;
         private KeyPressed keyPressed = KeyPressed.None;
 

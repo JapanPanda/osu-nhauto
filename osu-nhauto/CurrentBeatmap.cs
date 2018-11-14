@@ -68,6 +68,11 @@ namespace osu_nhauto {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             stopwatch.Start();
 
+            ModValue = MainWindow.osu.GetModValue();
+            if (!ModValue.HasValue)
+                Console.WriteLine("WARNING: Mod value not found. Assuming NoMod.");
+
+            bool shouldVInvert = ModValue.HasValue && (ModValue.Value & (int)Mods.HardRock) > 0;
             List<TimingPoint> timingPtsTemp = new List<TimingPoint>();
             List<nhauto.HitObject> hitObjsTemp = new List<nhauto.HitObject>();
             using (var sr = new StreamReader(File.OpenRead(filePath)))
@@ -109,14 +114,14 @@ namespace osu_nhauto {
                                 switch (hollySlider.CurveType)
                                 {
                                     case CurveType.Linear:
-                                        hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp));
+                                        hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                         break;
                                     case CurveType.Perfect:
-                                        hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp));
+                                        hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                         break;
                                     case CurveType.Catmull:
                                     case CurveType.Bezier:
-                                        hitObjsTemp.Add(new nhauto.HitObjectSliderBezier(hollySlider, SliderVelocity, timingPtsTemp));
+                                        hitObjsTemp.Add(new nhauto.HitObjectSliderBezier(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                         break;
                                     default:
                                         break;
@@ -124,7 +129,7 @@ namespace osu_nhauto {
                                 break;
                             }
                             case HitObjectType.Normal:
-                                hitObjsTemp.Add(new nhauto.HitObjectCircle(hollyObj as holly.HitObjectCircle));
+                                hitObjsTemp.Add(new nhauto.HitObjectCircle(hollyObj as holly.HitObjectCircle, shouldVInvert));
                                 break;
                             case HitObjectType.Spinner:
                                 hitObjsTemp.Add(new nhauto.HitObjectSpinner(hollyObj as holly.HitObjectSpinner));
@@ -139,10 +144,32 @@ namespace osu_nhauto {
             timingPoints = timingPtsTemp.AsReadOnly();
             hitObjects = hitObjsTemp.AsReadOnly();
 
+            ModifySettingsByModValue();
             ApplyStacking(); // TODO check file format version < 6
 
             stopwatch.Stop();
             Console.WriteLine($"Elapsed time to parse beatmap: {stopwatch.ElapsedMilliseconds}ms");
+        }
+
+        private void ModifySettingsByModValue()
+        {
+            if (!ModValue.HasValue)
+                return;
+
+            if ((ModValue.Value & (int)Mods.HardRock) > 0)
+            {
+                Console.WriteLine("Detected HardRock");
+                CircleSize = Math.Min(10, CircleSize * 1.3f);
+                ApproachRate = Math.Min(10, ApproachRate * 1.4f);
+                JudgementDifficulty = Math.Min(10, JudgementDifficulty * 1.4f);
+            }
+            else if ((ModValue.Value & (int)Mods.Easy) > 0)
+            {
+                Console.WriteLine("Detected Easy");
+                CircleSize *= 0.5f;
+                ApproachRate *= 0.5f;
+                JudgementDifficulty *= 0.5f;
+            }
         }
 
         private void ApplyStacking()
@@ -157,7 +184,7 @@ namespace osu_nhauto {
             else if (ApproachRate < 5)
                 timePreempt += 600 * (5 - ApproachRate) / 5;
             float stackThreshold = timePreempt * StackLeniency;
-
+            Console.WriteLine(stackThreshold);
             for (int i = hitObjects.Count - 1; i > 0; --i)
             {
                 nhauto.HitObject objectI = hitObjects[i];
@@ -227,6 +254,8 @@ namespace osu_nhauto {
         public float JudgementDifficulty { get; private set; }
         public float StackLeniency { get; private set; }
         public float SliderVelocity { get; private set; }
+
+        public int? ModValue { get; private set; }
 
         private InterProcessOsu ipc;
         private string filePath = null;

@@ -11,8 +11,11 @@ namespace osu_nhauto.HitObjects
         public int StackHeight { get; set; }
         public HitObjectType Type { get; private set; }
 
-        protected HitObject(osu_database_reader.Components.HitObjects.HitObject hollyObj)
+        protected HitObject(osu_database_reader.Components.HitObjects.HitObject hollyObj, bool vInvert)
         {
+            if (vInvert)
+                hollyObj.Y = 384 - hollyObj.Y;
+
             X = hollyObj.X;
             Y = hollyObj.Y;
             Time = hollyObj.Time;
