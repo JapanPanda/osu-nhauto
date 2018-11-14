@@ -33,6 +33,7 @@ namespace osu_nhauto.HitObjects
         private int prevTime;
         public override Vec2Float GetOffset(int currentTime)
         {
+            /*
             // Calculation of points in bezier slider
             if (!test)
             {
@@ -74,19 +75,22 @@ namespace osu_nhauto.HitObjects
 
             float expectedX = (float)(distance * Math.Cos(angle) * timeDiff / (0.01f * duration));
             float expectedY = (float)(distance * Math.Sin(angle) * timeDiff / (0.01f * duration));
-            return new Vec2Float(expectedX, expectedY);
+            */
+            Vec2Float point = GetBezierPoint(GetTimeDiff(currentTime) / PathTime);
+            //Console.WriteLine($"{point.X}, {point.Y}");
+            return new Vec2Float(point.X - X, point.Y - Y);
         }
 
         private Vec2Float GetBezierPoint(float step)
         {
-            Vec2Float point = new Vec2Float();
+            Vec2Float point = new Vec2Float(0, 0);
             int points = this.Points.Count;
-            point.X = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points - 0) * Math.Pow(step, 0) * this.X);
-            point.Y = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points - 0) * Math.Pow(step, 0) * this.Y);
-            for (int i = 0; i <= points - 1; i++)
+            point.X = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points) * Math.Pow(step, 0) * this.X);
+            point.Y = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points) * Math.Pow(step, 0) * this.Y);
+            for (int i = 1; i <= points; i++)
             {
-                point.X += (float)(GetBinomialCoefficient(points, i + 1) * Math.Pow(1 - step, points - i - 1) * Math.Pow(step, i + 1) * this.Points[i].X);
-                point.Y += (float)(GetBinomialCoefficient(points, i + 1) * Math.Pow(1 - step, points - i - 1) * Math.Pow(step, i + 1) * this.Points[i].Y);
+                point.X += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * this.Points[i - 1].X);
+                point.Y += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * this.Points[i - 1].Y);
 
             }
             return point;
