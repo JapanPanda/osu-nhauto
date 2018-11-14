@@ -68,6 +68,8 @@ namespace osu_nhauto.HitObjects
                     break;
                 }
             }
+            speedVelocity = System.Math.Max(0.1, speedVelocity);
+            speedVelocity = System.Math.Min(10, speedVelocity);
             return (int)System.Math.Ceiling(PixelLength * RepeatCount / (100 * sliderVelocity * speedVelocity / msPerQuarter));
         }
 
