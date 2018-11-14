@@ -6,19 +6,7 @@ namespace osu_nhauto.HitObjects
 {
     public class HitObjectSliderBezier : HitObjectSlider
     {
-
-        private struct FPOINT
-        {
-            public float X;
-            public float Y;
-
-            public FPOINT(float x, float y)
-            {
-                this.X = x;
-                this.Y = y;
-            }
-        }
-
+        
         public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
             System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
@@ -117,12 +105,14 @@ namespace osu_nhauto.HitObjects
             {
                 return;
             } 
-            if (cursorPos.X >= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) - 20 && (cursorPos.X <= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) + 20)
-                && cursorPos.Y >= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) - 20 && cursorPos.Y <= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) + 20)
+            if (cursorPos.X >= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) - 10 && (cursorPos.X <= ResolutionUtils.ConvertToScreenXCoord(currBezPoint.X) + 10)
+                && cursorPos.Y >= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) - 10 && cursorPos.Y <= ResolutionUtils.ConvertToScreenYCoord(currBezPoint.Y) + 10)
             {
                 cursorPos2.X = cursorPos.X;
                 cursorPos2.Y = cursorPos.Y;
                 currStep += 0.015f;
+                if (currStep > 1)
+                    currStep = 1;
                 prevBezPoint = currBezPoint;
                 currBezPoint = GetBezierPoint(currStep);
                 prevTime = currentTime;

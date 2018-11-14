@@ -20,6 +20,16 @@ namespace osu_nhauto
             public int Bottom { get; set; }
         }
 
+        public struct SCORE_DATA
+        {
+            public int score_300;
+            public int score_100;
+            public int score_50;
+            public int score_0;
+            public int current_score;
+            public int current_combo;
+        }
+
         public Osu()
         {
             ObtainProcess();
@@ -57,7 +67,7 @@ namespace osu_nhauto
                 addressPtr = memory.FindSignature(new byte[] { 0x75, 0x30, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x80, 0xB8 }, "xxx????xx", 0x06000000);
                 playSession = memory.ReadInt32(addressPtr + 0x3);
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
-
+                Console.WriteLine(addressPtr.ToString("X"));
                 stopwatch.Stop();
                 Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;
@@ -99,8 +109,23 @@ namespace osu_nhauto
             int modStruct = memory.ReadInt32(currSess + 0x1C);
             uint thing1 = memory.ReadUInt32(modStruct + 0x8);
             uint thing2 = memory.ReadUInt32(modStruct + 0xC);
-
             return (int)(thing1 ^ thing2);
+        }
+
+        public SCORE_DATA? GetScoreData()
+        {
+            int currSess = memory.ReadInt32(playSession);
+            if (currSess == 0)
+                return null;
+            
+            SCORE_DATA scoreData;
+            scoreData.score_300 = memory.ReadShort(currSess + 0x86);
+            scoreData.score_100 = memory.ReadShort(currSess + 0x84);
+            scoreData.score_50 = memory.ReadShort(currSess + 0x88);
+            scoreData.score_0 = memory.ReadShort(currSess + 0x8E);
+            scoreData.current_combo = memory.ReadShort(currSess + 0x90);
+            scoreData.current_score = memory.ReadInt32(currSess + 0x74);
+            return scoreData;
         }
 
         public int GetAudioTime() => memory.ReadInt32(audioTime);
