@@ -10,7 +10,7 @@ namespace osu_nhauto.HitObjects
         private readonly float endAngle;
 
         public HitObjectSliderPerfect(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
-            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints) : base(hollyObj, sliderVelocity, timingPoints)
+            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
             const float TWO_PI = 2 * (float)Math.PI;
 

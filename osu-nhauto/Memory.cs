@@ -108,6 +108,12 @@ namespace osu_nhauto
             return BitConverter.ToInt32(buffer, 0);
         }
 
+        public uint ReadUInt32(int address)
+        {
+            byte[] buffer = ReadBytes(address, sizeof(uint));
+            return BitConverter.ToUInt32(buffer, 0);
+        }
+
         public bool ReadBoolean(int address)
         {
             byte[] buffer = ReadBytes(address, sizeof(bool));

@@ -8,7 +8,7 @@ namespace osu_nhauto.HitObjects
         private readonly float yComponent;
 
         public HitObjectSliderLinear(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
-            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints) : base(hollyObj, sliderVelocity, timingPoints)
+            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
             float angle = (float)Math.Atan2(Points[0].Y - Y, Points[0].X - X);
             xComponent = (float)Math.Cos(angle);

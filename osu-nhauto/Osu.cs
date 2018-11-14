@@ -52,14 +52,11 @@ namespace osu_nhauto
                 int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, "xxxx????xx", 0x06000000);
                 audioTime = memory.ReadInt32(addressPtr + 0x4);
                 audioPlaying = audioTime + 0x24;
-
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
-                //34 C2 2F 05 50 9B 34 07 90 09 2D 07 50 9B 34 07 00 00 80 3F
-                /*
-                addressPtr = memory.FindSignature(new byte[] { 0x34, 0xC2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3F },
-                0x1000, 0x10000000, "xx??????????????xxxx");
 
-                timeMod = memory.ReadInt32(addressPtr + 0x4) + 0x10; */
+                addressPtr = memory.FindSignature(new byte[] { 0x75, 0x30, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x80, 0xB8 }, "xxx????xx", 0x06000000);
+                playSession = memory.ReadInt32(addressPtr + 0x3);
+                Console.WriteLine($"playSession={playSession.ToString("X")}");
 
                 stopwatch.Stop();
                 Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
@@ -93,11 +90,24 @@ namespace osu_nhauto
                 ObtainProcess();
         }
 
+        public int? GetModValue()
+        {
+            int currSess = memory.ReadInt32(playSession);
+            if (currSess == 0)
+                return null;
+
+            int modStruct = memory.ReadInt32(currSess + 0x1C);
+            uint thing1 = memory.ReadUInt32(modStruct + 0x8);
+            uint thing2 = memory.ReadUInt32(modStruct + 0xC);
+
+            return (int)(thing1 ^ thing2);
+        }
+
         public int GetAudioTime() => memory.ReadInt32(audioTime);
         public bool IsAudioPlaying() => memory.ReadInt32(audioPlaying) != 0;
         public bool IsAddressesLoaded() => this.loadedAddresses;
         public bool IsOpen() => osuProcess != null && !osuProcess.HasExited;
-        public float GetSpeedMultiplier() => memory.ReadSingle(timeMod);
+        public float GetSpeedMultiplier() => 1;
         public Process GetProcess() => this.osuProcess;
         public RECT GetWindowResolution() { GetWindowRect(osuProcess.MainWindowHandle, out RECT resolution); return resolution; }
         public RECT GetClientResolution() { GetClientRect(osuProcess.MainWindowHandle, out RECT resolution); return resolution; }
@@ -105,7 +115,7 @@ namespace osu_nhauto
         private Memory memory;
         private int audioTime;
         private int audioPlaying;
-        private int timeMod;
+        private int playSession;
         private bool loadedAddresses;
     }
 }

@@ -16,13 +16,17 @@ namespace osu_nhauto.HitObjects
         public float PathTime { get; private set; }
 
         public HitObjectSlider(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
-            List<TimingPoint> timingPoints) : base(hollyObj)
+            List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, vInvert)
         {
+            if (vInvert)
+                for (int i = 0; i < hollyObj.Points.Count; ++i)
+                    hollyObj.Points[i] = new Vector2(hollyObj.Points[i].X, 384 - hollyObj.Points[i].Y);
+
             PixelLength = hollyObj.Length;
             RepeatCount = hollyObj.RepeatCount;
             Points = hollyObj.Points.AsReadOnly();
             Curve = hollyObj.CurveType;
-            Duration = CalculateSliderDuration(sliderVelocity, timingPoints);
+            Duration = (int)(CalculateSliderDuration(sliderVelocity, timingPoints));
             EndTime = Time + Duration;
             PathTime = Duration / RepeatCount;
         }
