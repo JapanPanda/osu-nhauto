@@ -143,6 +143,8 @@ namespace osu_nhauto {
                                         }
                                         break;
                                     case CurveType.Catmull:
+                                        hitObjsTemp.Add(new nhauto.HitObjectSliderCatmull(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        break;
                                     case CurveType.Bezier:
                                         hitObjsTemp.Add(new nhauto.HitObjectSliderBezier(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                         break;
