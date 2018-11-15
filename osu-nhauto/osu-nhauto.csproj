@@ -107,6 +107,7 @@
     </ApplicationDefinition>
     <Compile Include="BeatmapUtils.cs" />
     <Compile Include="CurrentBeatmap.cs" />
+    <Compile Include="HitObjects\HitObjectSliderCatmull.cs" />
     <Compile Include="HitObjects\HitObjectCircle.cs" />
     <Compile Include="HitObjects\HitObjectSlider.cs" />
     <Compile Include="HitObjects\HitObjectSliderBezier.cs" />

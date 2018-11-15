@@ -56,12 +56,11 @@ namespace osu_nhauto {
             else
             {
                 string fileName = MainWindow.currentBeatmapPath;
-                Console.WriteLine(fileName);
                 int i = fileName.Length - 1;
                 while (i >= 7)
                     if (fileName[i--] == '\\')
                         break;
-                fileName = fileName.Substring(i + 1);
+                fileName = fileName.Substring(0, fileName.Length - 4).Substring(i + 2);
                 Console.WriteLine(fileName);
                 if (fileName == "Duplicate Folders Found")
                 {
