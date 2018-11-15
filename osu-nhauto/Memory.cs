@@ -20,17 +20,24 @@ namespace osu_nhauto
         {
             this.process = process;
         }
-
-        public int FindSignature(byte[] signature, string mask, int start = -1)
+      
+        public Dictionary<string, int> FindSignature(List<byte[]> signatures, List<string> mask, int start = -1)
         {
-            int[] search = new int[mask.Length];
-            for (int i = 0, j = 0; i < mask.Length; ++i)
+            int addressesFound = 0;
+            Dictionary<string, int> addressMap = new Dictionary<string, int>();
+            List<int[]> searches = new List<int[]>();
+            for (int i = 0; i < mask.Count; i++)
             {
-                search[i] = -1;
-                if (mask[i] == 'x')
-                    search[j++] = i;
+                int[] search = new int[mask[i].Length];
+                for (int j = 0, k = 0; i < mask[i].Length; i++)
+                {
+                    search[i] = -1;
+                    if (mask[i][j] == 'x')
+                        search[j++] = i;
+                }
+                search = search.Where(j => j >= 0).ToArray();
+                searches.Add(search);
             }
-            search = search.Where(i => i >= 0).ToArray();
 
             int startAddress = start > -1 ? start : (int)process.MainModule.BaseAddress;
             int currentAddress = startAddress;
@@ -68,12 +75,18 @@ namespace osu_nhauto
                         try
                         {
                             byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                            int index = FindPattern(buffer, signature, mask, search, ref running);
+                            int index = FindPattern(buffer, signature, search, ref running);
                             if (index != -1)
                             {
                                 result = (int)mbi.BaseAddress + index;
-                                running = false;
-                                return;
+                                if (result != -1)
+                                    addressMap;
+
+                                if (addressesFound == addressMap.Count)
+                                {
+                                    running = false;
+                                    return;
+                                }
                             }
                         }
                         catch (OverflowException) { }
@@ -126,7 +139,7 @@ namespace osu_nhauto
             return BitConverter.ToBoolean(buffer, 0);
         }
 
-        private int FindPattern(byte[] source, byte[] pattern, string mask, int[] search, ref bool running)
+        private int FindPattern(byte[] source, byte[] pattern, int[] search, ref bool running)
         {
             int size = source.Length - pattern.Length;
             int beforeEnd = search.Length - 1;
@@ -144,6 +157,11 @@ namespace osu_nhauto
             }
 
             return -1;
+        }
+
+        private void FindPatterns(byte[] source, List<byte[]> patterns, List<int> searchArrays, ref bool[] addressesFound)
+        {
+            
         }
 
         public Process process { get; private set; }
