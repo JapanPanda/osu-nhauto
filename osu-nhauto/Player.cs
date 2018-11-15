@@ -45,6 +45,14 @@ namespace osu_nhauto
             keyCode2 = (WindowsInput.Native.VirtualKeyCode)key2;
         }
 
+        public void Initialize()
+        {
+            try
+            {
+                Update();
+            }
+            catch (ThreadAbortException) {}
+        }
 
         public void Update()
         {
@@ -53,14 +61,16 @@ namespace osu_nhauto
             int nextHitObjIndex = 0;
             HitObject lastHitObject = null;
             HitObject currHitObject = beatmap.GetHitObjects()[0];
-            bool shouldPressSecondary = false;
-            int lastTime = MainWindow.osu.GetAudioTime();
+            bool shouldPressSecondary = false, initialVelocity = false;
             ResolutionUtils.CalculatePlayfieldResolution();
             speedMod = GetSpeedModifier();
             timeDiffThreshold = 116 * speedMod;
             velocity.Zero();
             missing.Zero();
+            while (MainWindow.osu.GetAudioTime() == 0) ;
+            while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - BeatmapUtils.TimeFadeIn) ;
             Console.WriteLine("Now listening for time changes");
+            int lastTime = MainWindow.osu.GetAudioTime();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 currentTime = MainWindow.osu.GetAudioTime() + 6;
@@ -69,6 +79,7 @@ namespace osu_nhauto
                     lastTime = currentTime;
                     if (currHitObject != null)
                     {
+                        /*
                         if (nextHitObjIndex == 0 && currentTime < currHitObject.Time && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
                         {
                             int x = (int)ResolutionUtils.ConvertToScreenXCoord(currHitObject.X);
@@ -76,8 +87,13 @@ namespace osu_nhauto
                             cursorPos2 = new POINT(x, y);
                             Mouse_Event(0x1 | 0x8000, x * 65535 / 1920, y * 65535 / 1080, 0, 0);
                         }
-                        else
-                            AutoPilot(currHitObject);
+                        else */
+                        if (nextHitObjIndex == 0 && !initialVelocity)
+                        {
+                            GetVelocities(currHitObject, lastHitObject);
+                            initialVelocity = true;
+                        }
+                        AutoPilot(currHitObject);
 
                         if (currHitObject.Time - currentTime <= 0)
                         {
@@ -120,7 +136,6 @@ namespace osu_nhauto
                         inputSimulator.Keyboard.KeyUp(keyCode2);
 
                     keyPressed = KeyPressed.None;
-                    while (!MainWindow.osu.IsAudioPlaying()) ;
                 }
             }
             if (continueRunning)
@@ -132,15 +147,16 @@ namespace osu_nhauto
             if (currHitObject == null)
                 return;
 
+            GetCursorPos(out cursorPos);
+            float xDiff = cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(currHitObject.X);
+            float yDiff = cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y);
+
             if (IsCursorOnCircle(currHitObject))
             {
-                velocity.X *= 0.33f;
-                velocity.Y *= 0.33f;
+                velocity.Multiply(0.01f);
                 return;
             }
 
-            float xDiff = cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(currHitObject.X);
-            float yDiff = cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y);
             Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
             {
                 float dist = Math.Abs(f) - BeatmapUtils.CirclePxRadius;
@@ -165,10 +181,10 @@ namespace osu_nhauto
                 velocity.Y = -yDiff * applyAutoCorrect(yDiff) * (float)Math.Pow(ResolutionUtils.Ratio.Y, 0.825);
             
             if (velocity.X != 0.0f)
-                velocity.X = Math.Min(Math.Abs(velocity.X), 1.25f * Math.Abs(cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(currHitObject.X))) * Math.Sign(velocity.X);
+                velocity.X = Math.Min(Math.Abs(velocity.X), Math.Abs(cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(currHitObject.X))) * Math.Sign(velocity.X);
 
             if (velocity.Y != 0.0f)
-                velocity.Y = Math.Min(Math.Abs(velocity.Y), 1.25f * Math.Abs(cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y))) * Math.Sign(velocity.Y);
+                velocity.Y = Math.Min(Math.Abs(velocity.Y), Math.Abs(cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y))) * Math.Sign(velocity.Y);
         }
 
         private void AutoPilotSpinner()
@@ -256,7 +272,7 @@ namespace osu_nhauto
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
             //Thread.Sleep(2);
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay((int)((currHitObject.EndTime - currHitObject.Time) / speedMod) + 16).ContinueWith(ant =>
+            Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / speedMod, 16)).ContinueWith(ant =>
             {
                 inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
                 if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
@@ -289,13 +305,14 @@ namespace osu_nhauto
                 */
             velocity.Multiply(Math.Max(1, dist / 9.25f));
             velocity.Multiply(speedMod);
+            Console.WriteLine($"Vel={velocity.X},{velocity.Y}");
         }
 
         private bool IsCursorOnCircle(HitObject currHitObject)
         {
             GetCursorPos(out cursorPos);
             return (float)Math.Sqrt(Math.Pow(cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(currHitObject.X), 2) + Math.Pow(cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y), 2))
-                <= BeatmapUtils.CirclePxRadius / 3.75f;
+                <= BeatmapUtils.CirclePxRadius / 2.5f;
         }
 
         private float GetSpeedModifier()
