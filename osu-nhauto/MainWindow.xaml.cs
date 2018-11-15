@@ -92,6 +92,7 @@ namespace osu_nhauto
             new Thread(() =>
             {
                 GameState pastStatus = statusHandler.GetGameState();
+                Thread playerUpdate = new Thread(player.Initialize);
                 while (true)
                 {
                     if (pastStatus != statusHandler.UpdateGameState())
@@ -105,8 +106,14 @@ namespace osu_nhauto
                                 beatmap.Parse();
                                 player.SetBeatmap(beatmap);
 
-                                this.Dispatcher.Invoke(new Thread(player.Update).Start);
+                                if (playerUpdate.ThreadState == System.Threading.ThreadState.Unstarted)
+                                    this.Dispatcher.Invoke(playerUpdate.Start);
                             }
+                        }
+                        else if (statusHandler.GetGameState() == GameState.Idle)
+                        {
+                            playerUpdate.Abort();
+                            playerUpdate = new Thread(player.Initialize);
                         }
 
                         pastStatus = statusHandler.GetGameState();
