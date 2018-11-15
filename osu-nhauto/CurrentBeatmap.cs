@@ -114,13 +114,28 @@ namespace osu_nhauto {
                                 switch (hollySlider.CurveType)
                                 {
                                     case CurveType.Linear:
-                                        hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        if (hollySlider.Points.Count == 1)
+                                            hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        else
+                                        {
+                                            List<osu_database_reader.Components.Vector2> duplPoints = new List<osu_database_reader.Components.Vector2>();
+                                            foreach (osu_database_reader.Components.Vector2 v in hollySlider.Points)
+                                            {
+                                                duplPoints.Add(v);
+                                                duplPoints.Add(v);
+                                            }
+                                            hollySlider.Points = duplPoints;
+                                            hitObjsTemp.Add(new nhauto.HitObjectSliderBezier(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        }
                                         break;
                                     case CurveType.Perfect:
                                         try
                                         {
-                                            hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
-                                        }
+                                            if (hollySlider.Points.Count == 2)
+                                                hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                            else
+                                                hitObjsTemp.Add(new nhauto.HitObjectSliderBezier(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                            }
                                         catch (Exception)
                                         {
                                             hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
