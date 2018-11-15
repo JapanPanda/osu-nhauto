@@ -1,53 +1,193 @@
-﻿using osu_database_reader.Components.Beatmaps;
+﻿using osu_database_reader.Components;
+using osu_database_reader.Components.Beatmaps;
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 
 namespace osu_nhauto.HitObjects
 {
     public class HitObjectSliderBezier : HitObjectSlider
     {
-        
-        public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
-            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
-        {
+        private List<Vec2Float> calculatedPath;
+        private List<double> cumulativeLength = new List<double>();
 
+        private Vec2Float[] subdivisionBuffer1;
+        private Vec2Float[] subdivisionBuffer2;
+
+        private const float bezier_tolerance = 0.0625f;
+        private int count;
+
+        public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
+            List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
+        {
+            List<Vec2Float> points = new List<Vec2Float>(hollyObj.Points.Count) { new Vec2Float(0, 0) };
+            foreach (Vector2 v in hollyObj.Points)
+                points.Add(new Vec2Float(v.X - X, v.Y - Y));
+
+            //TODO find sub-paths and process them
+            calculatedPath = ApproximateBezier(points);
+
+            double l = 0;
+            cumulativeLength.Add(l);
+            for (int i = 0; i < calculatedPath.Count - 1; ++i)
+            {
+                Vec2Float diff = calculatedPath[i + 1].Clone().Subtract(calculatedPath[i]);
+                double d = diff.Distance(0, 0);
+                if (PixelLength - l < d)
+                {
+                    calculatedPath[i + 1] = calculatedPath[i].Clone().Add(diff.Multiply((float)((PixelLength - l) / d)));
+                    calculatedPath.RemoveRange(i + 2, calculatedPath.Count - 2 - i);
+
+                    l = PixelLength;
+                    cumulativeLength.Add(l);
+                    break;
+                }
+                l += d;
+                cumulativeLength.Add(l);
+            }
+
+            if (l < PixelLength && calculatedPath.Count > 1)
+            {
+                Vec2Float diff = calculatedPath[calculatedPath.Count - 1].Clone().Subtract(calculatedPath[calculatedPath.Count - 2]);
+                double d = diff.Distance(0, 0);
+
+                if (d <= 0)
+                    return;
+
+                calculatedPath[calculatedPath.Count - 1].Add(diff.Multiply((float)((PixelLength - l) / d)));
+                cumulativeLength[calculatedPath.Count - 1] = PixelLength;
+            }
         }
 
         public override Vec2Float GetOffset(int currentTime)
         {
-            Vec2Float point = GetBezierPoint(GetTimeDiff(currentTime) / PathTime);
-            //Console.WriteLine($"{point.X}, {point.Y}");
-            return new Vec2Float(point.X - X, point.Y - Y);
+            double d = GetTimeDiff(currentTime) / PathTime * PixelLength;
+            return InterpolateVertices(IndexOfDistance(d), d);
         }
 
-        private Vec2Float GetBezierPoint(float step)
+        private List<Vec2Float> ApproximateLinear(List<Vec2Float> points)
         {
-            Vec2Float point = new Vec2Float(0, 0);
-            int points = this.Points.Count;
-            point.X = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points) * Math.Pow(step, 0) * this.X);
-            point.Y = (float)(GetBinomialCoefficient(points, 0) * Math.Pow(1 - step, points) * Math.Pow(step, 0) * this.Y);
-            for (int i = 1; i <= points; i++)
-            {
-                point.X += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * this.Points[i - 1].X);
-                point.Y += (float)(GetBinomialCoefficient(points, i) * Math.Pow(1 - step, points - i) * Math.Pow(step, i) * this.Points[i - 1].Y);
-
-            }
-            return point;
+            //TODO approximate linear parts
+            return null;
         }
 
-        private int GetBinomialCoefficient(int n, int k)
+        private List<Vec2Float> ApproximateBezier(List<Vec2Float> points)
         {
-            int res = 1;
+            List<Vec2Float> output = new List<Vec2Float>();
+            count = points.Count;
 
-            if (k > n - k)
-                k = n - k;
+            subdivisionBuffer1 = new Vec2Float[count];
+            subdivisionBuffer2 = new Vec2Float[count * 2 - 1];
 
-            for (int i = 0; i < k; ++i)
+            Stack<Vec2Float[]> toFlatten = new Stack<Vec2Float[]>();
+            Stack<Vec2Float[]> freeBuffers = new Stack<Vec2Float[]>();
+
+            toFlatten.Push(points.ToArray());
+
+            Vec2Float[] leftChild = subdivisionBuffer2;
+
+            while (toFlatten.Count > 0)
             {
-                res *= n - i;
-                res /= i + 1;
+                Vec2Float[] parent = toFlatten.Pop();
+                if (IsFlatEnough(parent))
+                {
+                    Approximate(parent, output);
+                    freeBuffers.Push(parent);
+                    continue;
+                }
+
+                Vec2Float[] rightChild = freeBuffers.Count > 0 ? freeBuffers.Pop() : new Vec2Float[count];
+                Subdivide(parent, leftChild, rightChild);
+
+                for (int i = 0; i < count; ++i)
+                    parent[i] = leftChild[i];
+
+                toFlatten.Push(rightChild);
+                toFlatten.Push(parent);
             }
-            return res;
+            output.Add(points[count - 1]);
+            return output;
+        }
+
+        private int IndexOfDistance(double d)
+        {
+            int i = cumulativeLength.BinarySearch(d);
+            if (i < 0)
+                i = ~i;
+            return i;
+        }
+
+        private Vec2Float InterpolateVertices(int i, double d)
+        {
+            if (i <= 0)
+                return calculatedPath[0];
+            else if (i >= calculatedPath.Count)
+                return calculatedPath[calculatedPath.Count - 1];
+
+            Vec2Float p0 = calculatedPath[i - 1].Clone();
+            Vec2Float p1 = calculatedPath[i].Clone();
+
+            double d0 = cumulativeLength[i - 1];
+            double d1 = cumulativeLength[i];
+
+            if (d1 - d0 <= Math.Pow(10, -7))
+                return p0;
+
+            double w = (d - d0) / (d1 - d0);
+            return p0.Add(p1.Subtract(p0).Multiply((float)w));
+        }
+
+        private bool IsFlatEnough(Vec2Float[] controlPoints)
+        {
+            for (int i = 1; i < controlPoints.Length - 1; i++)
+            {
+                Vec2Float a = new Vec2Float(controlPoints[i - 1].X - 2 * controlPoints[i].X + controlPoints[i + 1].X,
+                    controlPoints[i - 1].Y - 2 * controlPoints[i].Y + controlPoints[i + 1].Y);
+
+                if (a.X * a.X + a.Y * a.Y > bezier_tolerance * bezier_tolerance * 4)
+                    return false;
+            }
+            return true;
+        }
+
+        private void Subdivide(Vec2Float[] controlPoints, Vec2Float[] l, Vec2Float[] r)
+        {
+            Vec2Float[] midpoints = subdivisionBuffer1;
+
+            for (int i = 0; i < count; ++i)
+                midpoints[i] = controlPoints[i];
+
+            for (int i = 0; i < count; i++)
+            {
+                l[i] = midpoints[0];
+                r[count - i - 1] = midpoints[count - i - 1];
+
+                for (int j = 0; j < count - i - 1; j++)
+                {
+                    Vec2Float a = new Vec2Float((midpoints[j].X + midpoints[j + 1].X) / 2f,
+                        (midpoints[j].Y + midpoints[j + 1].Y) / 2f);
+                    midpoints[j] = a;
+                }
+            }
+        }
+
+        private void Approximate(Vec2Float[] controlPoints, List<Vec2Float> output)
+        {
+            Vec2Float[] l = subdivisionBuffer2;
+            Vec2Float[] r = subdivisionBuffer1;
+
+            Subdivide(controlPoints, l, r);
+
+            for (int i = 0; i < count - 1; ++i)
+                l[count + i] = r[i + 1];
+
+            output.Add(controlPoints[0]);
+            for (int i = 1; i < count - 1; ++i)
+            {
+                int index = 2 * i;
+                Vec2Float a = new Vec2Float((l[index - 1].X + 2 * l[index].X + l[index + 1].X) * 0.25f,
+                    (l[index - 1].Y + 2 * l[index].Y + l[index + 1].Y) * 0.25f);
+                output.Add(a);
+            }
         }
     }
 }

@@ -31,6 +31,13 @@ namespace osu_nhauto
 
         public Vec2Float Subtract(Vec2Float v) => Subtract(v.X, v.Y);
 
+        public Vec2Float Multiply(float f)
+        {
+            X *= f;
+            Y *= f;
+            return this;
+        }
+
         public Vec2Float Normal()
         {
             float tempX = X;

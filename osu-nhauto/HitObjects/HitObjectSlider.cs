@@ -78,8 +78,13 @@ namespace osu_nhauto.HitObjects
             int period = currentTime - Time;
             float timeDiff = period % PathTime;
             int repeatNumber = (int)(period / PathTime);
+
+            if (repeatNumber >= RepeatCount)
+                return RepeatCount % 2 == 1 ? PathTime : 0;
+
             if (repeatNumber % 2 == 1)
                 timeDiff = PathTime - timeDiff;
+
             return timeDiff;
         }
 
