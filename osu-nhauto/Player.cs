@@ -1,16 +1,15 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using WindowsInput;
+using WindowsInput.Native;
 using osu.Shared;
-using osu_database_reader;
-using osu_database_reader.Components.Beatmaps;
 using osu_nhauto.HitObjects;
 
 namespace osu_nhauto
 {
-
     public class Player
     {
         [DllImport("user32.dll", EntryPoint = "mouse_event", CallingConvention = CallingConvention.Winapi)]
@@ -33,16 +32,29 @@ namespace osu_nhauto
             }
         }
 
-        private enum KeyPressed
-        {
-            None, Key1, Key2
-        }
-
-
         public Player()
         {
-            keyCode1 = (WindowsInput.Native.VirtualKeyCode)key1;
-            keyCode2 = (WindowsInput.Native.VirtualKeyCode)key2;
+            string[] cfgFileArr = Directory.GetFiles(MainWindow.fileParser.GetBaseFilePath(), "osu!.*.cfg");
+            if (cfgFileArr.Length == 0)
+                return;
+
+            string regex = "[A-Z]|D[0-9]";
+            string key1 = null, key2 = null;
+            using (var sr = new StreamReader(File.OpenRead(cfgFileArr[0])))
+            {
+                string line;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    if (line.StartsWith("keyOsuLeft"))
+                        key1 = line.Split('=')[1].ToUpper().Substring(1);
+                    else if (line.StartsWith("keyOsuRight"))
+                        key2 = line.Split('=')[1].ToUpper().Substring(1);
+                }
+            }
+            if (key1 != null && System.Text.RegularExpressions.Regex.IsMatch(key1, regex))
+                SetKey1(key1.ToCharArray()[0]);
+            if (key2 != null && System.Text.RegularExpressions.Regex.IsMatch(key2, regex))
+                SetKey2(key2.ToCharArray()[0]);
         }
 
         public void Initialize()
@@ -79,15 +91,6 @@ namespace osu_nhauto
                     lastTime = currentTime;
                     if (currHitObject != null)
                     {
-                        /*
-                        if (nextHitObjIndex == 0 && currentTime < currHitObject.Time && (currHitObject.Type & (HitObjectType)0b1000_1011) != HitObjectType.Spinner)
-                        {
-                            int x = (int)ResolutionUtils.ConvertToScreenXCoord(currHitObject.X);
-                            int y = (int)ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y);
-                            cursorPos2 = new POINT(x, y);
-                            Mouse_Event(0x1 | 0x8000, x * 65535 / 1920, y * 65535 / 1080, 0, 0);
-                        }
-                        else */
                         if (nextHitObjIndex == 0 && !initialVelocity)
                         {
                             GetVelocities(currHitObject, lastHitObject);
@@ -305,7 +308,6 @@ namespace osu_nhauto
                 */
             velocity.Multiply(Math.Max(1, dist / 9.25f));
             velocity.Multiply(speedMod);
-            Console.WriteLine($"Vel={velocity.X},{velocity.Y}");
         }
 
         private bool IsCursorOnCircle(HitObject currHitObject)
@@ -334,18 +336,16 @@ namespace osu_nhauto
 
         public void ToggleAutoPilot() => autopilotRunning = !autopilotRunning;
         public void ToggleRelax() => relaxRunning = !relaxRunning;
-        public char GetKey1() => key1;
-        public char GetKey2() => key2;
-        public void SetKey1(char key) { this.keyCode1 = (WindowsInput.Native.VirtualKeyCode)key; this.key1 = key; }
-        public void SetKey2(char key) { this.keyCode2 = (WindowsInput.Native.VirtualKeyCode)key; this.key2 = key; }
+        public char GetKey1() => (char)keyCode1;
+        public char GetKey2() => (char)keyCode2;
+        public void SetKey1(char key) => keyCode1 = (VirtualKeyCode)key;
+        public void SetKey2(char key) => keyCode2 = (VirtualKeyCode)key;
         public bool IsAutoPilotRunning() => autopilotRunning;
         public bool IsRelaxRunning() => relaxRunning;
         public void SetBeatmap(CurrentBeatmap cb) => beatmap = cb;
 
-        private WindowsInput.Native.VirtualKeyCode keyCode1;
-        private WindowsInput.Native.VirtualKeyCode keyCode2;
-        private char key1 = 'Z';
-        private char key2 = 'X';
+        private VirtualKeyCode keyCode1 = (VirtualKeyCode)'Z';
+        private VirtualKeyCode keyCode2 = (VirtualKeyCode)'X';
         private bool autopilotRunning = false;
         private bool relaxRunning = false;
         private double ellipseAngle = 0;
@@ -360,5 +360,10 @@ namespace osu_nhauto
 
         private const double ANGLE_INCREMENT = Math.PI / 18;
         private const float TWO_PI = 2 * (float)Math.PI;
+
+        private enum KeyPressed
+        {
+            None, Key1, Key2
+        }
     }
 }
