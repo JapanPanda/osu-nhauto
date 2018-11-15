@@ -75,7 +75,7 @@ namespace osu_nhauto
         public void InitializeEvents()
         {
             osu = new Osu();
-            player = new Player(osu);
+            player = new Player();
 
             statusHandler = new StatusHandler(this);
             fileParser = new FileParser(this);
@@ -89,7 +89,6 @@ namespace osu_nhauto
             Key1TextBox.LostFocus += TextBox_OnLostFocus;
             Key2TextBox.LostFocus += TextBox_OnLostFocus;
 
-            Thread playerUpdateThread = new Thread(player.Update);
             new Thread(() =>
             {
                 GameState pastStatus = statusHandler.GetGameState();
