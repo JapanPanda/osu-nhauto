@@ -7,7 +7,7 @@ namespace osu_nhauto.HitObjects
 {
     public class HitObjectSliderBezier : HitObjectSlider
     {
-        private List<Vec2Float> calculatedPath;
+        private List<Vec2Float> calculatedPath = new List<Vec2Float>();
         private List<double> cumulativeLength = new List<double>();
 
         private Vec2Float[] subdivisionBuffer1;
@@ -24,7 +24,19 @@ namespace osu_nhauto.HitObjects
                 points.Add(new Vec2Float(v.X - X, v.Y - Y));
 
             //TODO find sub-paths and process them
-            calculatedPath = ApproximateBezier(points);
+            int finalIndex = points.Count - 1;
+            List<Vec2Float> subpath = new List<Vec2Float>();
+            for (int i = 0; i <= finalIndex; ++i)
+            {
+                subpath.Add(points[i]);
+                if (i == finalIndex || (points[i].X == points[i + 1].X && points[i].Y == points[i + 1].Y))
+                {
+                    List<Vec2Float> calculatedSubpath = ApproximateBezier(subpath);
+                    foreach (Vec2Float v in calculatedSubpath)
+                        calculatedPath.Add(v);
+                    subpath.Clear();
+                }
+            }
 
             double l = 0;
             cumulativeLength.Add(l);
@@ -62,12 +74,6 @@ namespace osu_nhauto.HitObjects
         {
             double d = GetTimeDiff(currentTime) / PathTime * PixelLength;
             return InterpolateVertices(IndexOfDistance(d), d);
-        }
-
-        private List<Vec2Float> ApproximateLinear(List<Vec2Float> points)
-        {
-            //TODO approximate linear parts
-            return null;
         }
 
         private List<Vec2Float> ApproximateBezier(List<Vec2Float> points)
