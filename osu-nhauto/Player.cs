@@ -278,7 +278,7 @@ namespace osu_nhauto
             velocity.X = xDiff / (currHitObject.Time - currentTime);
             velocity.Y = yDiff / (currHitObject.Time - currentTime);
             //float dist = (float)Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
-            velocity.Multiply(5f); // 7.1
+            velocity.Multiply(4f * ResolutionUtils.Ratio.X); // 7.1
             float dist = velocity.Distance(0, 0);
             /*
             if (dist >= 250)
