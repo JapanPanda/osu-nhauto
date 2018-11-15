@@ -18,7 +18,14 @@ namespace osu_nhauto.HitObjects
             Vec2Float midpt2 = new Vec2Float((Points[0].X + Points[1].X) / 2f, (Points[0].Y + Points[1].Y) / 2f);
             Vec2Float norml1 = new Vec2Float(Points[0].X - X, Points[0].Y - Y).Normal();
             Vec2Float norml2 = new Vec2Float(Points[1].X - Points[0].X, Points[1].Y - Points[0].Y).Normal();
-            circleCenter = Vec2Float.Intersect(midpt1, norml1, midpt2, norml2);
+            try
+            {
+                circleCenter = Vec2Float.Intersect(midpt1, norml1, midpt2, norml2);
+            }
+            catch (Exception)
+            {
+                throw new Exception();
+            }
 
             float midAngle = (float)Math.Atan2(Points[0].Y - circleCenter.Y, Points[0].X - circleCenter.X);
             startAngle = (float)Math.Atan2(Y - circleCenter.Y, X - circleCenter.X);
@@ -40,7 +47,7 @@ namespace osu_nhauto.HitObjects
             circleRadius = (float)Math.Sqrt(Math.Pow(X - circleCenter.X, 2) + Math.Pow(Y - circleCenter.Y, 2));
             float arcAngle = (float)PixelLength / circleRadius;
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
-        }
+            }
 
         public override Vec2Float GetOffset(int currentTime)
         {

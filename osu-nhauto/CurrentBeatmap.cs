@@ -117,7 +117,14 @@ namespace osu_nhauto {
                                         hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                         break;
                                     case CurveType.Perfect:
-                                        hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        try
+                                        {
+                                            hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        }
+                                        catch (Exception)
+                                        {
+                                            hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
+                                        }
                                         break;
                                     case CurveType.Catmull:
                                     case CurveType.Bezier:
