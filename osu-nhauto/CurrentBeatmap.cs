@@ -6,6 +6,7 @@ using osu.Helpers;
 using osu.Shared;
 using osu_database_reader;
 using osu_database_reader.BinaryFiles;
+using osu_database_reader.Components;
 using osu_database_reader.Components.Beatmaps;
 using nhauto = osu_nhauto.HitObjects;
 using holly = osu_database_reader.Components.HitObjects;
@@ -118,8 +119,8 @@ namespace osu_nhauto {
                                             hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                         else
                                         {
-                                            List<osu_database_reader.Components.Vector2> duplPoints = new List<osu_database_reader.Components.Vector2>();
-                                            foreach (osu_database_reader.Components.Vector2 v in hollySlider.Points)
+                                            List<Vector2> duplPoints = new List<Vector2>();
+                                            foreach (Vector2 v in hollySlider.Points)
                                             {
                                                 duplPoints.Add(v);
                                                 duplPoints.Add(v);
@@ -135,7 +136,7 @@ namespace osu_nhauto {
                                                 hitObjsTemp.Add(new nhauto.HitObjectSliderPerfect(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
                                             else
                                                 hitObjsTemp.Add(new nhauto.HitObjectSliderBezier(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
-                                            }
+                                        }
                                         catch (Exception)
                                         {
                                             hitObjsTemp.Add(new nhauto.HitObjectSliderLinear(hollySlider, SliderVelocity, timingPtsTemp, shouldVInvert));
