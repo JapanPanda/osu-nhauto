@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -59,15 +60,19 @@ namespace osu_nhauto
                 Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, "xxxx????xx", 0x06000000);
-                audioTime = memory.ReadInt32(addressPtr + 0x4);
+                List<string[]> signatures = new List<string[]>();
+                signatures.Add(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35"});
+                signatures.Add(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" });
+                Dictionary<string[], int> addressMap = memory.FindSignature(signatures, 0x06000000);
+                int primitiveAudioTime = addressMap[signatures[0]];
+                audioTime = memory.ReadInt32(primitiveAudioTime + 0x4);
                 audioPlaying = audioTime + 0x24;
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
 
-                addressPtr = memory.FindSignature(new byte[] { 0x75, 0x30, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x80, 0xB8 }, "xxx????xx", 0x06000000);
-                playSession = memory.ReadInt32(addressPtr + 0x3);
+                int primitivePlaySession = addressMap[signatures[1]];
+                playSession = memory.ReadInt32(primitivePlaySession + 0x3);
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
-                Console.WriteLine(addressPtr.ToString("X"));
+                Console.WriteLine(primitivePlaySession.ToString("X"));
                 stopwatch.Stop();
                 Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;

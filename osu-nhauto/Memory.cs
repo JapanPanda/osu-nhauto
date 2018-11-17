@@ -21,23 +21,10 @@ namespace osu_nhauto
             this.process = process;
         }
       
-        public Dictionary<string, int> FindSignature(List<byte[]> signatures, List<string> mask, int start = -1)
+        public Dictionary<string[], int> FindSignature(List<string[]> signatures, int start = -1)
         {
             int addressesFound = 0;
-            Dictionary<string, int> addressMap = new Dictionary<string, int>();
-            List<int[]> searches = new List<int[]>();
-            for (int i = 0; i < mask.Count; i++)
-            {
-                int[] search = new int[mask[i].Length];
-                for (int j = 0, k = 0; i < mask[i].Length; i++)
-                {
-                    search[i] = -1;
-                    if (mask[i][j] == 'x')
-                        search[j++] = i;
-                }
-                search = search.Where(j => j >= 0).ToArray();
-                searches.Add(search);
-            }
+            Dictionary<string[], int> addressMap = new Dictionary<string[], int>();
 
             int startAddress = start > -1 ? start : (int)process.MainModule.BaseAddress;
             int currentAddress = startAddress;
@@ -75,15 +62,16 @@ namespace osu_nhauto
                         try
                         {
                             byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                            int index = FindPattern(buffer, signature, search, ref running);
-                            if (index != -1)
+                            //int index = FindPattern(buffer, signature, search, ref running);
+                            bool updated = FindPatterns(buffer, signatures, (int)mbi.BaseAddress, ref addressMap, ref running);
+                            if (updated)
                             {
-                                result = (int)mbi.BaseAddress + index;
-                                if (result != -1)
-                                    addressMap;
+                                Console.WriteLine("Found some address");
+                                addressesFound++;
 
-                                if (addressesFound == addressMap.Count)
+                                if (addressMap.Count == signatures.Count)
                                 {
+                                    Console.WriteLine($"{addressMap.Count} == {signatures.Count}");
                                     running = false;
                                     return;
                                 }
@@ -96,10 +84,70 @@ namespace osu_nhauto
             Task.WaitAll(runningTasks);
             GC.Collect();
 
-            if (result != -1) 
-                return result;
+            if (addressMap.Count != 0)
+            {
+                return addressMap;
+            } 
+
             else
-                throw new Exception("Signature not found");
+                throw new Exception("Signatures not found");
+        }
+
+
+        private int FindPattern(byte[] source, byte[] pattern, int[] search, ref bool running)
+        {
+            int size = source.Length - pattern.Length;
+            int beforeEnd = search.Length - 1;
+            for (int i = -1, k; running && ++i < size; i += k)
+            {
+                k = 0;
+                for (int j = 0; j < search.Length; ++j)
+                {
+                    if (source[i + search[j]] != pattern[search[j]])
+                        break;
+                    if (j == beforeEnd)
+                        return i;
+                    k = search[j];
+                }
+            }
+
+            return -1;
+        }
+
+        // have to find a way to find / match multiple strings
+        private bool FindPatterns(byte[] source, List<string[]> signatures, int baseAddress, ref Dictionary<string[], int> addressMap, ref bool running)
+        {
+            bool sigFound = false;
+            foreach (string[] signature in signatures)
+            {
+                int size = source.Length - signature.Length;
+                for (int i = 0; i < size && running; i += 1)
+                {
+                    if (signature[0] != "??" && source[i] == Byte.Parse(signature[0], System.Globalization.NumberStyles.HexNumber))
+                    {
+                        int counter = 1;
+                        while (counter < signature.Length)
+                        {
+                            if (signature[counter] == "??" || (signature[counter] != "??" && source[i + counter] == Byte.Parse(signature[counter], System.Globalization.NumberStyles.HexNumber)))
+                                counter++;
+
+                            else
+                                break;
+                        }
+                        if (counter == signature.Length)
+                        {
+                            int fill;
+                            if (!addressMap.TryGetValue(signature, out fill))
+                            {
+                                addressMap.Add(signature, i + baseAddress);
+                                sigFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return sigFound;
         }
 
         public byte[] ReadBytes(int address, int size)
@@ -137,31 +185,6 @@ namespace osu_nhauto
         {
             byte[] buffer = ReadBytes(address, sizeof(bool));
             return BitConverter.ToBoolean(buffer, 0);
-        }
-
-        private int FindPattern(byte[] source, byte[] pattern, int[] search, ref bool running)
-        {
-            int size = source.Length - pattern.Length;
-            int beforeEnd = search.Length - 1;
-            for (int i = -1, k; running && ++i < size; i += k)
-            {
-                k = 0;
-                for (int j = 0; j < search.Length; ++j)
-                {
-                    if (source[i + search[j]] != pattern[search[j]])
-                        break;
-                    if (j == beforeEnd)
-                        return i;
-                    k = search[j];
-                }
-            }
-
-            return -1;
-        }
-
-        private void FindPatterns(byte[] source, List<byte[]> patterns, List<int> searchArrays, ref bool[] addressesFound)
-        {
-            
         }
 
         public Process process { get; private set; }
