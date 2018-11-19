@@ -165,46 +165,6 @@ namespace osu_nhauto
             return lps;
         }
         
-        // have to find a way to find / match multiple strings
-        private bool FindPatterns(byte[] source, List<string[]> signatures, int baseAddress, ref Dictionary<string[], int> addressMap, ref bool running)
-        {
-            bool sigFound = false;
-            for (int a = 0; a < signatures.Count; a++)
-            {
-                String[] signature = signatures[a];
-                int size = source.Length - signature.Length;
-                for (int i = 0; i < size && running; i++)
-                {
-                    if (signatures[a][0] == "-")
-                        break;
-
-                    if (signature[0] != "??" && source[i].ToString("X") == signature[0])
-                    {
-                        int counter = 1;
-                        while (counter < signature.Length)
-                        {
-                            if (signature[counter] == "??" || (signature[counter] != "??" && source[i + counter].ToString("X") == signature[counter]))
-                                counter++;
-
-                            else
-                                break;
-                        }
-                        if (counter == signature.Length)
-                        {
-                            int fill;
-                            if (!addressMap.TryGetValue(signature, out fill))
-                            {
-                                signatures[a][0] = "-";
-                                addressMap.Add(signature, i + baseAddress);
-                                sigFound = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            return sigFound;
-        }
 
         public byte[] ReadBytes(int address, int size)
         {
