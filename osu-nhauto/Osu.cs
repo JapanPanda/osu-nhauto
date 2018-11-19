@@ -63,7 +63,7 @@ namespace osu_nhauto
                 List<string[]> signatures = new List<string[]>();
                 signatures.Add(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35"});
                 signatures.Add(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" });
-                int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0x18000000, 0x20000000); 
+                int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0xF000000, 0x1D000000, 0x500000); 
                 stopwatch.Stop();
 
                 Console.WriteLine("Elapsed time to obtain address 1: {0} ms", stopwatch.ElapsedMilliseconds);

@@ -21,7 +21,7 @@ namespace osu_nhauto
             this.process = process;
         }
       
-        public int FindSignature(string[] signature, int start, int end)
+        public int FindSignature(string[] signature, int start, int end, int start2 = -1)
         {
             int addressesFound = 0;
             Dictionary<string[], int> addressMap = new Dictionary<string[], int>();
@@ -56,7 +56,14 @@ namespace osu_nhauto
                             currentAddress = area;
                             if (currentAddress > end)
                             {
-                                currentAddress = (int)process.MainModule.BaseAddress;
+                                if (start2 != -1)
+                                {
+                                    currentAddress = start2;
+                                    start2 = -1;
+                                    end = start - (start - start2) / 2;
+                                }
+                                else
+                                    currentAddress = (int)process.MainModule.BaseAddress;
                             }
                             Interlocked.Exchange(ref lockObj, 0);
                         }
