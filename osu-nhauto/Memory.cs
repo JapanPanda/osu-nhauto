@@ -30,59 +30,62 @@ namespace osu_nhauto
             int currentAddress = startAddress;
             uint mbiSize = (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION));
 
-            int lockObj = 0, result = -1;
-            bool running = true;
-            Task[] runningTasks = new Task[16];
-            for (int i = 0; i < runningTasks.Length; ++i)
+            foreach (string[] signature in signatures)
             {
-                runningTasks[i] = Task.Run(() =>
+                int lockObj = 0, result = -1;
+                bool running = true;
+                Task[] runningTasks = new Task[16];
+                for (int i = 0; i < runningTasks.Length; ++i)
                 {
-                    do
+                    runningTasks[i] = Task.Run(() =>
                     {
-                        MEMORY_BASIC_INFORMATION mbi;
-                        if (Interlocked.Exchange(ref lockObj, 1) == 0)
+                        do
                         {
-                            int status = VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
-                            int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
-
-                            if (currentAddress == area)
+                            MEMORY_BASIC_INFORMATION mbi;
+                            if (Interlocked.Exchange(ref lockObj, 1) == 0)
                             {
-                                running = false;
-                                return;
-                            }
-                            currentAddress = area;
-                            Interlocked.Exchange(ref lockObj, 0);
-                        }
-                        else
-                            continue;
+                                int status = VirtualQueryEx(process.Handle, currentAddress, out mbi, mbiSize);
+                                int area = (int)mbi.BaseAddress + (int)mbi.RegionSize;
 
-                        if (mbi.AllocationProtect == 0 || (int)mbi.RegionSize <= 0)
-                            continue;
-
-                        try
-                        {
-                            byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                            //int index = FindPattern(buffer, signature, search, ref running);
-                            bool updated = FindPatterns(buffer, signatures, (int)mbi.BaseAddress, ref addressMap, ref running);
-                            if (updated)
-                            {
-                                Console.WriteLine("Found some address");
-                                addressesFound++;
-
-                                if (addressMap.Count == signatures.Count)
+                                if (currentAddress == area)
                                 {
-                                    Console.WriteLine($"{addressMap.Count} == {signatures.Count}");
                                     running = false;
                                     return;
                                 }
+                                currentAddress = area;
+                                Interlocked.Exchange(ref lockObj, 0);
                             }
-                        }
-                        catch (OverflowException) { }
-                    } while (running);
-                });
+                            else
+                                continue;
+
+                            if (mbi.AllocationProtect == 0 || (int)mbi.RegionSize <= 0)
+                                continue;
+
+                            try
+                            {
+                                byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
+                            //int index = FindPattern(buffer, signature, search, ref running);
+                            bool updated = FindPattern(buffer, signature, (int)mbi.BaseAddress, ref addressMap, ref running);
+                                if (updated)
+                                {
+                                    Console.WriteLine("Found some address");
+                                    addressesFound++;
+
+                                    if (addressMap.Count == signatures.Count)
+                                    {
+                                        Console.WriteLine($"{addressMap.Count} == {signatures.Count}");
+                                        running = false;
+                                        return;
+                                    }
+                                }
+                            }
+                            catch (OverflowException) { }
+                        } while (running);
+                    });
+                }
+                Task.WaitAll(runningTasks);
+                GC.Collect();
             }
-            Task.WaitAll(runningTasks);
-            GC.Collect();
 
             if (addressMap.Count != 0)
             {
@@ -94,41 +97,90 @@ namespace osu_nhauto
         }
 
 
-        private int FindPattern(byte[] source, byte[] pattern, int[] search, ref bool running)
+        private bool FindPattern(byte[] source, string[] signature, int baseAddress, ref Dictionary<string[], int> addressMap, ref bool running)
         {
-            int size = source.Length - pattern.Length;
-            int beforeEnd = search.Length - 1;
-            for (int i = -1, k; running && ++i < size; i += k)
+            bool sigFound = false;
+            int i = 0, j = 0;
+            int[] lps = initKMP(signature);
+            while (i < source.Length && j < signature.Length && running)
             {
-                k = 0;
-                for (int j = 0; j < search.Length; ++j)
+                if (signature[j] == "??" || source[i].ToString("X") == signature[j])
                 {
-                    if (source[i + search[j]] != pattern[search[j]])
-                        break;
-                    if (j == beforeEnd)
-                        return i;
-                    k = search[j];
+                    i++;
+                    j++;
+                }
+                else
+                {
+                    if (j != 0)
+                        j = lps[j - 1];
+                    else
+                        i++;
                 }
             }
 
-            return -1;
+            if (j == signature.Length)
+            {
+                Console.WriteLine($"Found at {(baseAddress + i - j).ToString("X")}");
+                for (int z = 0; z < signature.Length; z++)
+                {
+                    Console.Write($"{source[z + i - j].ToString("X")} ");
+                }
+                Console.WriteLine();
+                addressMap.Add(signature, baseAddress + i - j);
+                running = false;
+                sigFound = true;
+            }
+            return sigFound;
         }
 
+        private int[] initKMP(string[] signature)
+        {
+            int[] lps = new int[signature.Length];
+            int i = 1, j = 0;
+
+            lps[0] = 0;
+
+            while (i < lps.Length)
+            {
+                if (signature[i] == signature[j])
+                {
+                    j++;
+                    lps[i - 1] = j;
+                    i++;
+                }
+                else if (j == 0)
+                {
+                    lps[i] = 0;
+                    i++;
+                }
+                else
+                {
+                    j = lps[j - 1];
+                }
+            }
+
+            return lps;
+        }
+        
         // have to find a way to find / match multiple strings
         private bool FindPatterns(byte[] source, List<string[]> signatures, int baseAddress, ref Dictionary<string[], int> addressMap, ref bool running)
         {
             bool sigFound = false;
-            foreach (string[] signature in signatures)
+            for (int a = 0; a < signatures.Count; a++)
             {
+                String[] signature = signatures[a];
                 int size = source.Length - signature.Length;
-                for (int i = 0; i < size && running; i += 1)
+                for (int i = 0; i < size && running; i++)
                 {
-                    if (signature[0] != "??" && source[i] == Byte.Parse(signature[0], System.Globalization.NumberStyles.HexNumber))
+                    if (signatures[a][0] == "-")
+                        break;
+
+                    if (signature[0] != "??" && source[i].ToString("X") == signature[0])
                     {
                         int counter = 1;
                         while (counter < signature.Length)
                         {
-                            if (signature[counter] == "??" || (signature[counter] != "??" && source[i + counter] == Byte.Parse(signature[counter], System.Globalization.NumberStyles.HexNumber)))
+                            if (signature[counter] == "??" || (signature[counter] != "??" && source[i + counter].ToString("X") == signature[counter]))
                                 counter++;
 
                             else
@@ -139,6 +191,7 @@ namespace osu_nhauto
                             int fill;
                             if (!addressMap.TryGetValue(signature, out fill))
                             {
+                                signatures[a][0] = "-";
                                 addressMap.Add(signature, i + baseAddress);
                                 sigFound = true;
                                 break;
