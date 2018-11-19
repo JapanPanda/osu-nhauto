@@ -60,9 +60,6 @@ namespace osu_nhauto
                 Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                List<string[]> signatures = new List<string[]>();
-                signatures.Add(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35"});
-                signatures.Add(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" });
                 int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0xF000000, 0x1D000000, 0x500000); 
                 stopwatch.Stop();
 
@@ -72,7 +69,7 @@ namespace osu_nhauto
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
                 stopwatch.Restart();
                 int primitivePlaySession = memory.FindSignature(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" }, 0x2000000, 0x6000000);
-                playSession = memory.ReadInt32(primitivePlaySession + 0x3);
+                playSession = memory.ReadInt32(primitivePlaySession + 0x3;
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
                 Console.WriteLine(primitivePlaySession.ToString("X"));
                 stopwatch.Stop();

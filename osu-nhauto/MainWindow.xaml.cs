@@ -74,16 +74,17 @@ namespace osu_nhauto
 
         public void InitializeEvents()
         {
+            statusHandler = new StatusHandler(this);
+            fileParser = new FileParser();
+
             osu = new Osu();
             player = new Player();
 
-            statusHandler = new StatusHandler(this);
-            fileParser = new FileParser(this);
-                
             statusHandler.UpdateWindow();
             RelaxButton.Click += RelaxButton_Click;
             AutoPilotButton.Click += AutoPilotButton_Click;
-
+            Key1TextBox.Text = player.GetKey1().ToString();
+            Key2TextBox.Text = player.GetKey2().ToString();
             Key1TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key2TextBox.KeyDown += new KeyEventHandler(TextBox_OnKeyPress);
             Key1TextBox.LostFocus += TextBox_OnLostFocus;

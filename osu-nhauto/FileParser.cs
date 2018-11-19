@@ -5,11 +5,6 @@ namespace osu_nhauto
 {
     public class FileParser
     {
-        public FileParser(MainWindow mw)
-        {
-            main = mw;
-        }
-
         public string GetBaseFilePath()
         {
             if (this.baseFilePath == null)
@@ -41,6 +36,7 @@ namespace osu_nhauto
                 }
             }
             difficultyStrippedTitle = difficultyStrippedTitle.Replace(".", string.Empty);
+            difficultyStrippedTitle = difficultyStrippedTitle.Replace(':', '_');
             difficultyStrippedTitle = difficultyStrippedTitle.Replace('/', '_');
             fileName = difficultyStrippedTitle;
             string[] songFolderList = Directory.GetDirectories(baseFilePath + "Songs\\", "*" + difficultyStrippedTitle);
@@ -64,7 +60,5 @@ namespace osu_nhauto
 
         private string fileName;
         private string baseFilePath = null;
-
-        private readonly MainWindow main;
     }
 }

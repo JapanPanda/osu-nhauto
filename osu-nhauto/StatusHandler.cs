@@ -56,12 +56,11 @@ namespace osu_nhauto {
             else
             {
                 string fileName = MainWindow.currentBeatmapPath;
-                Console.WriteLine(fileName);
                 int i = fileName.Length - 1;
                 while (i >= 7)
                     if (fileName[i--] == '\\')
                         break;
-                fileName = fileName.Substring(i + 1);
+                fileName = fileName.Substring(0, fileName.Length - 4).Substring(i + 2);
                 Console.WriteLine(fileName);
                 if (fileName == "Duplicate Folders Found")
                 {
@@ -122,18 +121,21 @@ namespace osu_nhauto {
                 MainWindow.osu.ObtainAddresses();
                 state = MainWindow.osu.IsAddressesLoaded() == false ? GameState.Loading : GameState.Idle;
             }
-            else if (MainWindow.osu.GetWindowTitle().IndexOf("-", StringComparison.InvariantCulture) > -1 &&
-                !MainWindow.osu.GetWindowTitle().EndsWith(".osu") && MainWindow.osu.GetWindowTitle().StartsWith("osu!"))
-            {
-                state = GameState.Playing;
-            }
             else if (!MainWindow.osu.IsAddressesLoaded())
             {
                 state = GameState.Error;
             }
             else
             {
-                state = GameState.Idle;
+                string title = MainWindow.osu.GetWindowTitle();
+                if (title.IndexOf("-", StringComparison.InvariantCulture) > -1 && !title.EndsWith(".osu")/* && title.StartsWith("osu!") */)
+                {
+                    state = GameState.Playing;
+                }
+                else
+                {
+                    state = GameState.Idle;
+                }
             }
             return state;
         }
