@@ -20,25 +20,22 @@ namespace osu_nhauto
         {
             this.process = process;
         }
-
-        public int FindSignature(byte[] signature, string mask, int start = -1)
+      
+        public int FindSignature(string[] signature, int start, int end, int start2 = -1)
         {
-            int[] search = new int[mask.Length];
-            for (int i = 0, j = 0; i < mask.Length; ++i)
-            {
-                search[i] = -1;
-                if (mask[i] == 'x')
-                    search[j++] = i;
-            }
-            search = search.Where(i => i >= 0).ToArray();
+            int addressesFound = 0;
+            Dictionary<string[], int> addressMap = new Dictionary<string[], int>();
 
             int startAddress = start > -1 ? start : (int)process.MainModule.BaseAddress;
             int currentAddress = startAddress;
             uint mbiSize = (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION));
 
-            int lockObj = 0, result = -1;
+            int[] lps = initKMP(signature);
+            int lockObj = 0;
+
             bool running = true;
             Task[] runningTasks = new Task[16];
+            int output = -1;
             for (int i = 0; i < runningTasks.Length; ++i)
             {
                 runningTasks[i] = Task.Run(() =>
@@ -57,6 +54,17 @@ namespace osu_nhauto
                                 return;
                             }
                             currentAddress = area;
+                            if (currentAddress > end)
+                            {
+                                if (start2 != -1)
+                                {
+                                    currentAddress = start2;
+                                    start2 = -1;
+                                    end = start - (start - start2) / 2;
+                                }
+                                else
+                                    currentAddress = (int)process.MainModule.BaseAddress;
+                            }
                             Interlocked.Exchange(ref lockObj, 0);
                         }
                         else
@@ -68,11 +76,12 @@ namespace osu_nhauto
                         try
                         {
                             byte[] buffer = ReadBytes((int)mbi.BaseAddress, (int)mbi.RegionSize);
-                            int index = FindPattern(buffer, signature, mask, search, ref running);
-                            if (index != -1)
+                            //int index = FindPattern(buffer, signature, search, ref running);
+                            int tempResult = FindPattern(buffer, signature, lps, (int)mbi.BaseAddress, ref running);
+                            if (tempResult != -1)
                             {
-                                result = (int)mbi.BaseAddress + index;
                                 running = false;
+                                output = tempResult;
                                 return;
                             }
                         }
@@ -82,11 +91,119 @@ namespace osu_nhauto
             }
             Task.WaitAll(runningTasks);
             GC.Collect();
+            
 
-            if (result != -1) 
-                return result;
+            if (output != -1)
+            {
+                return output;
+            } 
+
             else
-                throw new Exception("Signature not found");
+                throw new Exception("Signatures not found");
+        }
+
+
+        private int FindPattern(byte[] source, string[] signature, int[] lps, int baseAddress, ref bool running)
+        {
+            int i = 0, j = 0;
+            while (i < source.Length && j < signature.Length && running)
+            {
+                if (signature[j] == "??" || source[i].ToString("X") == signature[j])
+                {
+                    i++;
+                    j++;
+                }
+                else
+                {
+                    if (j != 0)
+                        j = lps[j - 1];
+                    else
+                        i++;
+                }
+            }
+
+            if (j == signature.Length)
+            {
+                Console.WriteLine($"Found at {(baseAddress + i - j).ToString("X")}");
+                for (int z = 0; z < signature.Length; z++)
+                {
+                    Console.Write($"{source[z + i - j].ToString("X")} ");
+                }
+                Console.WriteLine();
+                running = false;
+                return baseAddress + i - j;
+            }
+            return -1;
+        }
+
+        private int[] initKMP(string[] signature)
+        {
+            int[] lps = new int[signature.Length];
+            int i = 1, j = 0;
+
+            lps[0] = 0;
+
+            while (i < lps.Length)
+            {
+                if (signature[i] == signature[j])
+                {
+                    j++;
+                    lps[i - 1] = j;
+                    i++;
+                }
+                else if (j == 0)
+                {
+                    lps[i] = 0;
+                    i++;
+                }
+                else
+                {
+                    j = lps[j - 1];
+                }
+            }
+
+            return lps;
+        }
+        
+        // have to find a way to find / match multiple strings
+        private bool FindPatterns(byte[] source, List<string[]> signatures, int baseAddress, ref Dictionary<string[], int> addressMap, ref bool running)
+        {
+            bool sigFound = false;
+            for (int a = 0; a < signatures.Count; a++)
+            {
+                String[] signature = signatures[a];
+                int size = source.Length - signature.Length;
+                for (int i = 0; i < size && running; i++)
+                {
+                    if (signatures[a][0] == "-")
+                        break;
+
+                    if (signature[0] != "??" && source[i].ToString("X") == signature[0])
+                    {
+                        int counter = 1;
+                        while (counter < signature.Length)
+                        {
+                            if (signature[counter] == "??" || (signature[counter] != "??" && source[i + counter].ToString("X") == signature[counter]))
+                                counter++;
+
+                            else
+                                break;
+                        }
+                        if (counter == signature.Length)
+                        {
+                            int fill;
+                            if (!addressMap.TryGetValue(signature, out fill))
+                            {
+                                signatures[a][0] = "-";
+                                addressMap.Add(signature, i + baseAddress);
+                                sigFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return sigFound;
         }
 
         public byte[] ReadBytes(int address, int size)
@@ -124,26 +241,6 @@ namespace osu_nhauto
         {
             byte[] buffer = ReadBytes(address, sizeof(bool));
             return BitConverter.ToBoolean(buffer, 0);
-        }
-
-        private int FindPattern(byte[] source, byte[] pattern, string mask, int[] search, ref bool running)
-        {
-            int size = source.Length - pattern.Length;
-            int beforeEnd = search.Length - 1;
-            for (int i = -1, k; running && ++i < size; i += k)
-            {
-                k = 0;
-                for (int j = 0; j < search.Length; ++j)
-                {
-                    if (source[i + search[j]] != pattern[search[j]])
-                        break;
-                    if (j == beforeEnd)
-                        return i;
-                    k = search[j];
-                }
-            }
-
-            return -1;
         }
 
         public Process process { get; private set; }
