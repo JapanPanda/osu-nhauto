@@ -231,8 +231,9 @@ namespace osu_nhauto
                 GetCursorPos(out cursorPos);
                 velocity.X = pos.X * ResolutionUtils.Ratio.X + cursorPos2.X - cursorPos.X;
                 velocity.Y = pos.Y * ResolutionUtils.Ratio.Y + cursorPos2.Y - cursorPos.Y;
-                if ((currHitObject as HitObjectSlider).RepeatCount != 0 && (currHitObject as HitObjectSlider).PixelLength <= 70)
+                if ((currHitObject as HitObjectSlider).RepeatCount > 1 && (currHitObject as HitObjectSlider).PixelLength <= 70)
                 {
+                    Console.WriteLine((currHitObject as HitObjectSlider).RepeatCount);
                     velocity.X = 0;
                     velocity.Y = 0;
                 }

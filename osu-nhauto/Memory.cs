@@ -60,7 +60,7 @@ namespace osu_nhauto
                                 {
                                     currentAddress = start2;
                                     start2 = -1;
-                                    end = start - (start - start2) / 2;
+                                    end = 0x1F000000;
                                 }
                                 else
                                     currentAddress = (int)process.MainModule.BaseAddress;

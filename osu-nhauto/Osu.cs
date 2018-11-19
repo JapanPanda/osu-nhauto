@@ -60,7 +60,7 @@ namespace osu_nhauto
                 Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0xF000000, 0x1D000000, 0x500000); 
+                int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0x2000000, 0x6000000, 0xF000000); // 0xF000000, 0x1D000000, 0x500000 
                 stopwatch.Stop();
 
                 Console.WriteLine("Elapsed time to obtain address 1: {0} ms", stopwatch.ElapsedMilliseconds);
