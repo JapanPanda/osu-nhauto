@@ -34,27 +34,30 @@ namespace osu_nhauto
 
         public Player()
         {
-            string[] cfgFileArr = Directory.GetFiles(MainWindow.fileParser.GetBaseFilePath(), "osu!.*.cfg");
-            if (cfgFileArr.Length == 0)
-                return;
-
-            string regex = "[A-Z]|D[0-9]";
-            string key1 = null, key2 = null;
-            using (var sr = new StreamReader(File.OpenRead(cfgFileArr[0])))
+            if (MainWindow.osu.GetProcess() != null)
             {
-                string line;
-                while ((line = sr.ReadLine()) != null)
+                string[] cfgFileArr = Directory.GetFiles(MainWindow.fileParser.GetBaseFilePath(), "osu!.*.cfg");
+                if (cfgFileArr.Length == 0)
+                    return;
+
+                string regex = "[A-Z]|D[0-9]";
+                string key1 = null, key2 = null;
+                using (var sr = new StreamReader(File.OpenRead(cfgFileArr[0])))
                 {
-                    if (line.StartsWith("keyOsuLeft"))
-                        key1 = line.Split('=')[1].ToUpper().Substring(1);
-                    else if (line.StartsWith("keyOsuRight"))
-                        key2 = line.Split('=')[1].ToUpper().Substring(1);
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        if (line.StartsWith("keyOsuLeft"))
+                            key1 = line.Split('=')[1].ToUpper().Substring(1);
+                        else if (line.StartsWith("keyOsuRight"))
+                            key2 = line.Split('=')[1].ToUpper().Substring(1);
+                    }
                 }
+                if (key1 != null && System.Text.RegularExpressions.Regex.IsMatch(key1, regex))
+                    SetKey1(key1.ToCharArray()[0]);
+                if (key2 != null && System.Text.RegularExpressions.Regex.IsMatch(key2, regex))
+                    SetKey2(key2.ToCharArray()[0]);
             }
-            if (key1 != null && System.Text.RegularExpressions.Regex.IsMatch(key1, regex))
-                SetKey1(key1.ToCharArray()[0]);
-            if (key2 != null && System.Text.RegularExpressions.Regex.IsMatch(key2, regex))
-                SetKey2(key2.ToCharArray()[0]);
         }
 
         public void Initialize()
