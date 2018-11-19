@@ -63,18 +63,20 @@ namespace osu_nhauto
                 List<string[]> signatures = new List<string[]>();
                 signatures.Add(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35"});
                 signatures.Add(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" });
-                Dictionary<string[], int> addressMap = memory.FindSignature(signatures, 0x06000000);
-                int primitiveAudioTime = addressMap[signatures[0]];
+                int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0x18000000, 0x20000000); 
+                stopwatch.Stop();
+
+                Console.WriteLine("Elapsed time to obtain address 1: {0} ms", stopwatch.ElapsedMilliseconds);
                 audioTime = memory.ReadInt32(primitiveAudioTime + 0x4);
                 audioPlaying = audioTime + 0x24;
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
-
-                int primitivePlaySession = addressMap[signatures[1]];
+                stopwatch.Restart();
+                int primitivePlaySession = memory.FindSignature(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" }, 0x2000000, 0x6000000);
                 playSession = memory.ReadInt32(primitivePlaySession + 0x3);
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
                 Console.WriteLine(primitivePlaySession.ToString("X"));
                 stopwatch.Stop();
-                Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
+                Console.WriteLine("Elapsed time to obtain address 2: {0} ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;
             }
             catch (System.Exception e)
