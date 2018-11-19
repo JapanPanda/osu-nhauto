@@ -208,6 +208,10 @@ namespace osu_nhauto
                 x += (float)(50 * Math.Cos(ellipseAngle)) * sign;
                 y += (float)(50 * Math.Sin(ellipseAngle)) * sign;
             }
+            int sign1 = rand.Next(0, 1) == 0 ? -1 : 1;
+            int sign2 = rand.Next(0, 1) == 0 ? -1 : 1;
+            x += (float)rand.NextDouble() * 150 * sign1;
+            y += (float)rand.NextDouble() * 10 * sign2;
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
         
@@ -228,7 +232,6 @@ namespace osu_nhauto
                 {
                     velocity.X = 0;
                     velocity.Y = 0;
-                    Console.WriteLine((currHitObject as HitObjectSlider).PixelLength);
                 }
             }
         }
@@ -357,6 +360,7 @@ namespace osu_nhauto
         public bool IsRelaxRunning() => relaxRunning;
         public void SetBeatmap(CurrentBeatmap cb) => beatmap = cb;
 
+        private Random rand = new Random();
         private VirtualKeyCode keyCode1 = (VirtualKeyCode)'Z';
         private VirtualKeyCode keyCode2 = (VirtualKeyCode)'X';
         private bool autopilotRunning = false;
