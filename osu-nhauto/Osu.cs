@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -59,17 +60,20 @@ namespace osu_nhauto
                 Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, "xxxx????xx");
-                audioTime = memory.ReadInt32(addressPtr + 0x4);
+                int primitiveAudioTime = memory.FindSignature(new string[] { "8B", "45", "E8", "A3", "??", "??", "??", "??", "8B", "35" }, 0x2000000, 0x6000000, 0xF000000); // 0xF000000, 0x1D000000, 0x500000 
+                stopwatch.Stop();
+
+                Console.WriteLine("Elapsed time to obtain address 1: {0} ms", stopwatch.ElapsedMilliseconds);
+                audioTime = memory.ReadInt32(primitiveAudioTime + 0x4);
                 audioPlaying = audioTime + 0x24;
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
-
-                addressPtr = memory.FindSignature(new byte[] { 0x75, 0x30, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x80, 0xB8 }, "xxx????xx");
-                playSession = memory.ReadInt32(addressPtr + 0x3);
+                stopwatch.Restart();
+                int primitivePlaySession = memory.FindSignature(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" }, 0x2000000, 0x6000000);
+                playSession = memory.ReadInt32(primitivePlaySession + 0x3);
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
-                Console.WriteLine(addressPtr.ToString("X"));
+                Console.WriteLine(primitivePlaySession.ToString("X"));
                 stopwatch.Stop();
-                Console.WriteLine("Elapsed time to obtain addresses: {0} ms", stopwatch.ElapsedMilliseconds);
+                Console.WriteLine("Elapsed time to obtain address 2: {0} ms", stopwatch.ElapsedMilliseconds);
                 loadedAddresses = true;
             }
             catch (System.Exception e)

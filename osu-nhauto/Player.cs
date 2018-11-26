@@ -34,27 +34,30 @@ namespace osu_nhauto
 
         public void ConfigureDefaultKeybinds()
         {
-            string[] cfgFileArr = Directory.GetFiles(MainWindow.fileParser.GetBaseFilePath(), "osu!.*.cfg");
-            if (cfgFileArr.Length == 0)
-                return;
-
-            string regex = "[A-Z]|D[0-9]";
-            string key1 = null, key2 = null;
-            using (var sr = new StreamReader(File.OpenRead(cfgFileArr[0])))
+            if (MainWindow.osu.GetProcess() != null)
             {
-                string line;
-                while ((line = sr.ReadLine()) != null)
+                string[] cfgFileArr = Directory.GetFiles(MainWindow.fileParser.GetBaseFilePath(), "osu!.*.cfg");
+                if (cfgFileArr.Length == 0)
+                    return;
+
+                string regex = "[A-Z]|D[0-9]";
+                string key1 = null, key2 = null;
+                using (var sr = new StreamReader(File.OpenRead(cfgFileArr[0])))
                 {
-                    if (line.StartsWith("keyOsuLeft"))
-                        key1 = line.Split('=')[1].ToUpper().Substring(1);
-                    else if (line.StartsWith("keyOsuRight"))
-                        key2 = line.Split('=')[1].ToUpper().Substring(1);
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        if (line.StartsWith("keyOsuLeft"))
+                            key1 = line.Split('=')[1].ToUpper().Substring(1);
+                        else if (line.StartsWith("keyOsuRight"))
+                            key2 = line.Split('=')[1].ToUpper().Substring(1);
+                    }
                 }
+                if (key1 != null && System.Text.RegularExpressions.Regex.IsMatch(key1, regex))
+                    SetKey1(key1.ToCharArray()[0]);
+                if (key2 != null && System.Text.RegularExpressions.Regex.IsMatch(key2, regex))
+                    SetKey2(key2.ToCharArray()[0]);
             }
-            if (key1 != null && System.Text.RegularExpressions.Regex.IsMatch(key1, regex))
-                SetKey1(key1.ToCharArray()[0]);
-            if (key2 != null && System.Text.RegularExpressions.Regex.IsMatch(key2, regex))
-                SetKey2(key2.ToCharArray()[0]);
         }
 
         public void Initialize()
@@ -198,6 +201,10 @@ namespace osu_nhauto
                 x += (float)(50 * Math.Cos(ellipseAngle)) * sign;
                 y += (float)(50 * Math.Sin(ellipseAngle)) * sign;
             }
+            int sign1 = rand.Next(0, 1) == 0 ? -1 : 1;
+            int sign2 = rand.Next(0, 1) == 0 ? -1 : 1;
+            x += (float)rand.NextDouble() * 150 * sign1;
+            y += (float)rand.NextDouble() * 10 * sign2;
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
         
@@ -214,6 +221,12 @@ namespace osu_nhauto
                 GetCursorPos(out cursorPos);
                 velocity.X = pos.X * ResolutionUtils.Ratio.X + cursorPos2.X - cursorPos.X;
                 velocity.Y = pos.Y * ResolutionUtils.Ratio.Y + cursorPos2.Y - cursorPos.Y;
+                if ((currHitObject as HitObjectSlider).RepeatCount > 1 && (currHitObject as HitObjectSlider).PixelLength <= 70)
+                {
+                    Console.WriteLine((currHitObject as HitObjectSlider).RepeatCount);
+                    velocity.X = 0;
+                    velocity.Y = 0;
+                }
             }
         }
 
@@ -349,6 +362,7 @@ namespace osu_nhauto
         public bool IsRelaxRunning() => relaxRunning;
         public void SetBeatmap(CurrentBeatmap cb) => beatmap = cb;
 
+        private Random rand = new Random();
         private VirtualKeyCode keyCode1 = (VirtualKeyCode)'Z';
         private VirtualKeyCode keyCode2 = (VirtualKeyCode)'X';
         private bool autopilotRunning = false;

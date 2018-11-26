@@ -7,7 +7,7 @@ namespace osu_nhauto
     {
         public string GetBaseFilePath()
         {
-            if (this.baseFilePath == null)
+            if (this.baseFilePath == null && MainWindow.osu.GetProcess() != null)
                 this.baseFilePath = MainWindow.osu.GetProcess().MainModule.FileName.Substring(0, MainWindow.osu.GetProcess().MainModule.FileName.Length - 8);
 
             return baseFilePath;
