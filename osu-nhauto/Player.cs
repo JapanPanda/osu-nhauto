@@ -32,7 +32,7 @@ namespace osu_nhauto
             }
         }
 
-        public Player()
+        public void ConfigureDefaultKeybinds()
         {
             string[] cfgFileArr = Directory.GetFiles(MainWindow.fileParser.GetBaseFilePath(), "osu!.*.cfg");
             if (cfgFileArr.Length == 0)
@@ -61,6 +61,9 @@ namespace osu_nhauto
         {
             try
             {
+                BeatmapUtils.InitializeBeatmap(beatmap);
+                speedMod = GetSpeedModifier();
+                timeDiffThreshold = 116 * speedMod;
                 Update();
             }
             catch (ThreadAbortException)
@@ -71,15 +74,12 @@ namespace osu_nhauto
 
         public void Update()
         {
-            BeatmapUtils.InitializeBeatmap(beatmap);
             bool continueRunning = false;
             int nextHitObjIndex = 0;
             HitObject lastHitObject = null;
             HitObject currHitObject = beatmap.GetHitObjects()[0];
             bool shouldPressSecondary = false, initialVelocity = false;
             ResolutionUtils.CalculatePlayfieldResolution();
-            speedMod = GetSpeedModifier();
-            timeDiffThreshold = 116 * speedMod;
             velocity.Zero();
             missing.Zero();
             while (MainWindow.osu.GetAudioTime() == 0) { Thread.Sleep(1); }
@@ -87,20 +87,25 @@ namespace osu_nhauto
             Console.WriteLine("Now listening for time changes");
             int lastTime = MainWindow.osu.GetAudioTime();
             scoreData = null;
+            POINT lastPos = new POINT(0, 0);
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
+                GetCursorPos(out cursorPos);
+                //Console.WriteLine($"{cursorPos.X} {cursorPos.Y}");
+                lastPos = cursorPos;
                 currentTime = MainWindow.osu.GetAudioTime() + 6;
                 if (currentTime > lastTime)
                 {
-                    lastTime = currentTime;
                     if (currHitObject != null)
                     {
                         if (nextHitObjIndex == 0 && !initialVelocity)
                         {
+                            GetCursorPos(out cursorPos);
+                            //Mouse_Event(0x1 | 0x8000, cursorPos.X * 65535 / 1920, cursorPos.Y * 65535 / 1080, 0, 0);
                             GetVelocities(currHitObject);
                             initialVelocity = true;
                         }
-                        AutoPilot(currHitObject);
+                        AutoPilot(currHitObject, currentTime - lastTime);
 
                         if (currHitObject.Time - currentTime <= 0)
                         {
@@ -110,7 +115,7 @@ namespace osu_nhauto
                                 lastHitObject = currHitObject;
                             }
 
-                            if (currentTime >= currHitObject.EndTime + 3)
+                            if (currentTime >= currHitObject.EndTime + 8)
                             {
                                 scoreData = MainWindow.osu.GetScoreData() ?? scoreData;
                                 currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
@@ -126,6 +131,7 @@ namespace osu_nhauto
                     }
                     else
                         return;
+                    lastTime = currentTime;
                 }
                 else if (currentTime < lastTime - 3)
                 {
@@ -142,49 +148,36 @@ namespace osu_nhauto
                 Update();
         }
 
-        private void AutoPilotCircle(HitObject currHitObject)
+        private void AutoPilotCircle(HitObject currHitObject, int offset)
         {
             if (currHitObject == null)
                 return;
 
-            Vec2Float objDistVec = GetDistanceVectorFromObject(currHitObject);
-            float objDist = objDistVec.Distance(0, 0);
-            if (objDist <= BeatmapUtils.CirclePxRadius)
+            if (velocity.Distance(0, 0) < 1e-5)
             {
-                velocity.Multiply(objDist / BeatmapUtils.CirclePxRadius);
-                if (objDist <= BeatmapUtils.CirclePxRadius / 2.75f)
-                    velocity.Multiply(0.02f);
+                velocity.Zero();
                 return;
             }
 
-            Func<float, float> applyAutoCorrect = new Func<float, float>((f) =>
-            {
-                float dist = Math.Abs(f) - BeatmapUtils.CirclePxRadius;
-                if (dist >= 40)
-                    return 3.7f; // 3.7
-                if (dist >= 25)
-                    return 1.8f;
-                if (dist >= 10)
-                    return 0.45f;
-                if (dist >= 5)
-                    return 0.18f;
-                if (dist >= 3)
-                    return 0.05f;
-                if (dist >= 1)
-                    return 0.04f;
-                return 0;
-            });
-            if (velocity.X * objDistVec.X >= 0)
-                velocity.X = -objDistVec.X * applyAutoCorrect(objDistVec.X) * (float)Math.Pow(ResolutionUtils.Ratio.X, 0.825);
+            Vec2Float objDistVec = GetDistanceVectorFromObject(currHitObject);
+            float maxDrawnRadius = BeatmapUtils.CirclePxRadius * ResolutionUtils.Ratio.X;
+            float objDist = objDistVec.Distance(0, 0);
+            velocity.Multiply(offset);
+            
+            if (velocity.X * objDistVec.X <= 0)
+                velocity.X = -objDistVec.X * 0.5f;
 
-            if (velocity.Y * objDistVec.Y >= 0)
-                velocity.Y = -objDistVec.Y * applyAutoCorrect(objDistVec.Y) * (float)Math.Pow(ResolutionUtils.Ratio.Y, 0.825);
+            if (velocity.Y * objDistVec.Y <= 0)
+                velocity.Y = -objDistVec.Y * 0.5f;
             
             if (velocity.X != 0.0f)
                 velocity.X = Math.Min(Math.Abs(velocity.X), Math.Abs(objDistVec.X)) * Math.Sign(velocity.X);
 
             if (velocity.Y != 0.0f)
                 velocity.Y = Math.Min(Math.Abs(velocity.Y), Math.Abs(objDistVec.Y)) * Math.Sign(velocity.Y);
+
+            if (objDist <= 5)
+                velocity.Multiply(objDist / maxDrawnRadius);
         }
 
         private void AutoPilotSpinner()
@@ -192,30 +185,27 @@ namespace osu_nhauto
             GetCursorPos(out cursorPos);
             Vec2Float center = ResolutionUtils.CenterPos;
             float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - center.X, 2) + Math.Pow(cursorPos.Y - center.Y, 2));
-            if (ellipseAngle == -1)
-                ellipseAngle = Math.Atan2(cursorPos.Y - center.Y, cursorPos.X - center.X);
-            else
-                ellipseAngle += ANGLE_INCREMENT;
+            ellipseAngle += ANGLE_INCREMENT;
 
             if (ellipseAngle > TWO_PI)
                 ellipseAngle = ellipseAngle % TWO_PI;
 
             float x = (center.X + (float)(dist * Math.Cos(ellipseAngle))) * 65535 / 1920;
             float y = (center.Y + (float)(dist * Math.Sin(ellipseAngle))) * 65535 / 1080;
-            if (dist != 100)
+            if (dist != 33)
             {
-                int sign = Math.Sign(100 - dist);
+                int sign = Math.Sign(33 - dist);
                 x += (float)(50 * Math.Cos(ellipseAngle)) * sign;
                 y += (float)(50 * Math.Sin(ellipseAngle)) * sign;
             }
             Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
         }
         
-        private void AutoPilotSlider(HitObject currHitObject)
+        private void AutoPilotSlider(HitObject currHitObject, int offset)
         {
             if (currentTime < currHitObject.Time)
             {
-                AutoPilotCircle(currHitObject);
+                AutoPilotCircle(currHitObject, offset);
                 cursorPos2 = cursorPos;
             }
             else
@@ -227,21 +217,26 @@ namespace osu_nhauto
             }
         }
 
-        private void AutoPilot(HitObject currHitObject)
+        private void AutoPilot(HitObject currHitObject, int offset)
         {
             if (!autopilotRunning)
                 return;
 
+            bool hitCircle = false;
             switch (currHitObject.Type & (HitObjectType)0b1000_1011)
             {
                 case HitObjectType.Normal:
-                    AutoPilotCircle(currHitObject);
+                    AutoPilotCircle(currHitObject, offset);
+                    hitCircle = true;
                     break;
                 case HitObjectType.Slider:
-                    AutoPilotSlider(currHitObject);
+                    if (currentTime < currHitObject.Time)
+                        hitCircle = true;
+                    AutoPilotSlider(currHitObject, offset);
                     break;
                 case HitObjectType.Spinner:
                     velocity.Zero();
+                    missing.Zero();
                     if (currentTime >= currHitObject.Time - 50)
                         AutoPilotSpinner();
                     return;
@@ -262,10 +257,12 @@ namespace osu_nhauto
                 velocity.Y += delta.Y;
                 missing.Y -= delta.Y;
             }
-
+            //Console.WriteLine($"{velocity.X} {velocity.Y} {velocity.Distance(0, 0)}");
             Mouse_Event(0x1, (int)velocity.X, (int)velocity.Y, 0, 0);
 
             velocity.Subtract(delta.X, delta.Y);
+            if (hitCircle)
+                velocity.Multiply(1.0f / offset);
         }
 
         private void Relax(HitObject currHitObject, HitObject lastHitObject, ref bool shouldPressSecondary)
@@ -291,28 +288,29 @@ namespace osu_nhauto
             if (!autopilotRunning)
                 return;
 
+            missing.Zero();
+            GetCursorPos(out cursorPos);
             if ((currHitObject.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
             {
+                Vec2Float center = ResolutionUtils.CenterPos;
+                ellipseAngle = Math.Atan2(cursorPos.Y - center.Y, cursorPos.X - center.X);
                 velocity.Zero();
                 return;
             }
 
-            ellipseAngle = -1;
-            GetCursorPos(out cursorPos);
-            float xDiff = ResolutionUtils.ConvertToScreenXCoord(currHitObject.X) - cursorPos.X;
-            float yDiff = ResolutionUtils.ConvertToScreenYCoord(currHitObject.Y) - cursorPos.Y;
-            velocity.X = xDiff / (currHitObject.Time - currentTime);
-            velocity.Y = yDiff / (currHitObject.Time - currentTime);
-            velocity.Multiply(4.33f * (float)Math.Pow(ResolutionUtils.Ratio.X, 1.75)); // 7.1 8.6 (160) 9.8 (250)
-            velocity.Multiply(Math.Max(1, velocity.Distance(0, 0) / 44f));
-            velocity.Multiply(speedMod);
+            // TODO check if in middle of stream
+            int timeDiff = currHitObject.Time - currentTime - 100;
+            velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Max(1, timeDiff));
         }
 
         private Vec2Float GetDistanceVectorFromObject(HitObject hitObj)
         {
             GetCursorPos(out cursorPos);
-            return new Vec2Float(cursorPos.X - ResolutionUtils.ConvertToScreenXCoord(hitObj.X), cursorPos.Y - ResolutionUtils.ConvertToScreenYCoord(hitObj.Y));
+            return new Vec2Float(ResolutionUtils.ConvertToScreenXCoord(hitObj.X) - cursorPos.X, ResolutionUtils.ConvertToScreenYCoord(hitObj.Y) - cursorPos.Y);
         }
+
+        private Vec2Float GetDistanceVectorFromTwoObjects(HitObject obj1, HitObject obj2) =>
+            new Vec2Float(ResolutionUtils.ConvertToScreenXCoord(obj2.X - obj1.X), ResolutionUtils.ConvertToScreenYCoord(obj2.Y - obj1.Y));
 
         private float GetSpeedModifier()
         {

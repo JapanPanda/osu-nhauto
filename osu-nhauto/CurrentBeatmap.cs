@@ -209,7 +209,6 @@ namespace osu_nhauto {
             else if (ApproachRate < 5)
                 timePreempt += 600 * (5 - ApproachRate) / 5;
             float stackThreshold = timePreempt * StackLeniency;
-            Console.WriteLine(stackThreshold);
             for (int i = hitObjects.Count - 1; i > 0; --i)
             {
                 nhauto.HitObject objectI = hitObjects[i];

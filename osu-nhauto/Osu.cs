@@ -59,12 +59,12 @@ namespace osu_nhauto
                 Console.WriteLine("Attempting to find signatures");
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, "xxxx????xx", 0x05000000);
+                int addressPtr = memory.FindSignature(new byte[] { 0x8B, 0x45, 0xE8, 0xA3, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x35 }, "xxxx????xx");
                 audioTime = memory.ReadInt32(addressPtr + 0x4);
                 audioPlaying = audioTime + 0x24;
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
 
-                addressPtr = memory.FindSignature(new byte[] { 0x75, 0x30, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x80, 0xB8 }, "xxx????xx", 0x05000000);
+                addressPtr = memory.FindSignature(new byte[] { 0x75, 0x30, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x80, 0xB8 }, "xxx????xx");
                 playSession = memory.ReadInt32(addressPtr + 0x3);
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
                 Console.WriteLine(addressPtr.ToString("X"));

@@ -79,7 +79,8 @@ namespace osu_nhauto
 
             osu = new Osu();
             player = new Player();
-
+            if (osu.IsOpen())
+                player.ConfigureDefaultKeybinds();
             statusHandler.UpdateWindow();
             RelaxButton.Click += RelaxButton_Click;
             AutoPilotButton.Click += AutoPilotButton_Click;
@@ -115,6 +116,15 @@ namespace osu_nhauto
                         {
                             playerUpdate.Abort();
                             playerUpdate = new Thread(player.Initialize);
+                        }
+                        else if (statusHandler.GetGameState() == GameState.Loading)
+                        {
+                            player.ConfigureDefaultKeybinds();
+                            Dispatcher.Invoke(() =>
+                            {
+                                Key1TextBox.Text = player.GetKey1().ToString();
+                                Key2TextBox.Text = player.GetKey2().ToString();
+                            });
                         }
 
                         pastStatus = statusHandler.GetGameState();
