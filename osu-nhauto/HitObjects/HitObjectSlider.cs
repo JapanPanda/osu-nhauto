@@ -14,8 +14,9 @@ namespace osu_nhauto.HitObjects
         public CurveType Curve;
         public int Duration { get; private set; }
         public float PathTime { get; private set; }
+        public bool TreatAsCircle { get; set; }
 
-        public HitObjectSlider(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
+        public HitObjectSlider(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, vInvert)
         {
             if (vInvert)
@@ -26,7 +27,7 @@ namespace osu_nhauto.HitObjects
             RepeatCount = hollyObj.RepeatCount;
             Points = hollyObj.Points.AsReadOnly();
             Curve = hollyObj.CurveType;
-            Duration = (int)(CalculateSliderDuration(sliderVelocity, timingPoints));
+            Duration = CalculateSliderDuration(sliderVelocity, timingPoints);
             EndTime = Time + Duration;
             PathTime = Duration / RepeatCount;
         }
@@ -75,6 +76,10 @@ namespace osu_nhauto.HitObjects
 
         protected float GetTimeDiff(int currentTime)
         {
+            currentTime = System.Math.Min(currentTime, EndTime - 24);
+            if (currentTime <= Time)
+                return 0;
+
             int period = currentTime - Time;
             float timeDiff = period % PathTime;
             int repeatNumber = (int)(period / PathTime);
@@ -88,8 +93,10 @@ namespace osu_nhauto.HitObjects
             return timeDiff;
         }
 
-        public Vec2Float GetPosition(int currentTime) => GetOffset(currentTime).Clone().Add(X, Y);
+        public Vec2Float GetPosition(int currentTime) => GetRelativePosition(currentTime).Add(X, Y);
 
-        public abstract Vec2Float GetOffset(int currentTime);
+        public Vec2Float GetRelativePosition(int currentTime) => TreatAsCircle ? new Vec2Float(0, 0) : CalculateOffset(currentTime);
+
+        protected abstract Vec2Float CalculateOffset(int currentTime);
     }
 }

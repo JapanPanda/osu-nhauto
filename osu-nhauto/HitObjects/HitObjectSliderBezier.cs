@@ -16,7 +16,7 @@ namespace osu_nhauto.HitObjects
         private const float bezier_tolerance = 0.0625f;
         private int count;
 
-        public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
+        public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
             List<Vec2Float> points = new List<Vec2Float>(hollyObj.Points.Count) { new Vec2Float(0, 0) };
@@ -70,7 +70,7 @@ namespace osu_nhauto.HitObjects
             }
         }
 
-        public override Vec2Float GetOffset(int currentTime)
+        protected override Vec2Float CalculateOffset(int currentTime)
         {
             double d = GetTimeDiff(currentTime) / PathTime * PixelLength;
             return InterpolateVertices(IndexOfDistance(d), d);

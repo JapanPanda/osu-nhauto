@@ -1,4 +1,6 @@
-﻿using System;
+﻿using osu_database_reader.Components.Beatmaps;
+using System;
+using System.Collections.Generic;
 
 namespace osu_nhauto.HitObjects
 {
@@ -9,8 +11,8 @@ namespace osu_nhauto.HitObjects
         private readonly float startAngle;
         private readonly float endAngle;
 
-        public HitObjectSliderPerfect(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity,
-            System.Collections.Generic.List<osu_database_reader.Components.Beatmaps.TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
+        public HitObjectSliderPerfect(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
+            List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
             const float TWO_PI = 2 * (float)Math.PI;
 
@@ -49,7 +51,7 @@ namespace osu_nhauto.HitObjects
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
             }
 
-        public override Vec2Float GetOffset(int currentTime)
+        protected override Vec2Float CalculateOffset(int currentTime)
         {
             float currAngle = startAngle + (endAngle - startAngle) * GetTimeDiff(currentTime) / PathTime;
             return new Vec2Float(circleCenter.X - X + circleRadius * (float)Math.Cos(currAngle), circleCenter.Y - Y + circleRadius * (float)Math.Sin(currAngle));

@@ -96,6 +96,8 @@ namespace osu_nhauto {
                         StackLeniency = float.Parse(line.Split(':')[1]);
                     else if (line.StartsWith("SliderMultiplier:"))
                         SliderVelocity = float.Parse(line.Split(':')[1]);
+                    else if (line.StartsWith("SliderTickRate"))
+                        SliderTickRate = int.Parse(line.Split(':')[1]);
                     else if (line.StartsWith("OverallDifficulty:"))
                         JudgementDifficulty = float.Parse(line.Split(':')[1]);
                     else if (line.Equals("[TimingPoints]"))
@@ -106,6 +108,7 @@ namespace osu_nhauto {
                         timingPtsTemp.Add(TimingPoint.FromString(line));
                     else if (startParsing == 2)
                     {
+                        float sliderFollowCircleSize = (54.4f - 4.48f * CircleSize) * 2.2f;
                         holly.HitObject hollyObj = holly.HitObject.FromString(line);
                         switch (hollyObj.Type & (HitObjectType)0b1000_1011)
                         {
@@ -166,6 +169,14 @@ namespace osu_nhauto {
                 }
             }
 
+            for (int i = 0; i < hitObjsTemp.Count; ++i)
+            {
+                if (hitObjsTemp[i].Type == HitObjectType.Slider)
+                {
+                    nhauto.HitObjectSlider slider = hitObjsTemp[i] as nhauto.HitObjectSlider;
+                    slider.TreatAsCircle = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - 24).Length() < (54.4f - 4.48f * CircleSize);
+                }
+            }
             timingPoints = timingPtsTemp.AsReadOnly();
             hitObjects = hitObjsTemp.AsReadOnly();
 
@@ -278,6 +289,7 @@ namespace osu_nhauto {
         public float JudgementDifficulty { get; private set; }
         public float StackLeniency { get; private set; }
         public float SliderVelocity { get; private set; }
+        public int SliderTickRate { get; private set; }
 
         public int? ModValue { get; private set; }
 

@@ -50,6 +50,8 @@ namespace osu_nhauto
 
         public float Distance(Vec2Float v) => Distance(v.X, v.Y);
 
+        public float Length() => (float)Math.Sqrt(X * X + Y * Y);
+
         public Vec2Float Zero()
         {
             X = Y = 0;

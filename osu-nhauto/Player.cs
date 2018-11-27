@@ -217,16 +217,10 @@ namespace osu_nhauto
             }
             else
             {
-                Vec2Float pos = (currHitObject as HitObjectSlider).GetOffset(currentTime);
+                Vec2Float pos = (currHitObject as HitObjectSlider).GetRelativePosition(currentTime);
                 GetCursorPos(out cursorPos);
                 velocity.X = pos.X * ResolutionUtils.Ratio.X + cursorPos2.X - cursorPos.X;
                 velocity.Y = pos.Y * ResolutionUtils.Ratio.Y + cursorPos2.Y - cursorPos.Y;
-                if ((currHitObject as HitObjectSlider).RepeatCount > 1 && (currHitObject as HitObjectSlider).PixelLength <= 70)
-                {
-                    Console.WriteLine((currHitObject as HitObjectSlider).RepeatCount);
-                    velocity.X = 0;
-                    velocity.Y = 0;
-                }
             }
         }
 
@@ -270,7 +264,6 @@ namespace osu_nhauto
                 velocity.Y += delta.Y;
                 missing.Y -= delta.Y;
             }
-            //Console.WriteLine($"{velocity.X} {velocity.Y} {velocity.Distance(0, 0)}");
             Mouse_Event(0x1, (int)velocity.X, (int)velocity.Y, 0, 0);
 
             velocity.Subtract(delta.X, delta.Y);
@@ -312,7 +305,7 @@ namespace osu_nhauto
             }
 
             // TODO check if in middle of stream
-            int timeDiff = currHitObject.Time - currentTime - 100;
+            int timeDiff = currHitObject.Time - currentTime - 50;
             velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Max(1, timeDiff));
         }
 
