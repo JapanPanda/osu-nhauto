@@ -187,25 +187,37 @@ namespace osu_nhauto
         {
             GetCursorPos(out cursorPos);
             Vec2Float center = ResolutionUtils.CenterPos;
-            float dist = (float)Math.Sqrt(Math.Pow(cursorPos.X - center.X, 2) + Math.Pow(cursorPos.Y - center.Y, 2));
-            ellipseAngle += ANGLE_INCREMENT;
 
             if (ellipseAngle > TWO_PI)
-                ellipseAngle = ellipseAngle % TWO_PI;
-
-            float x = (center.X + (float)(dist * Math.Cos(ellipseAngle))) * 65535 / 1920;
-            float y = (center.Y + (float)(dist * Math.Sin(ellipseAngle))) * 65535 / 1080;
-            if (dist != 33)
             {
-                int sign = Math.Sign(33 - dist);
-                x += (float)(50 * Math.Cos(ellipseAngle)) * sign;
-                y += (float)(50 * Math.Sin(ellipseAngle)) * sign;
+                ellipseAngle = ellipseAngle % TWO_PI;
+                ellipseRotAngle += rand.Next(-150, 150) * 0.001f;
+                ellipseRotation.X = (float)Math.Cos(ellipseRotAngle);
+                ellipseRotation.Y = (float)Math.Sin(ellipseRotAngle);
+                ellipseRadii.X += 20 * (float)(0.75 + rand.NextDouble());
+                ellipseRadii.Y += 20 * (float)(0.75 + rand.NextDouble());
+                ellipseTranslation.X += rand.Next(-15 - (int)ellipseTranslation.X, 15 - (int)ellipseTranslation.X);
+                ellipseTranslation.Y += rand.Next(-15 - (int)ellipseTranslation.Y, 15 - (int)ellipseTranslation.Y);
             }
+
+            float xn = ellipseRadii.X * (float)Math.Cos(ellipseAngle);
+            float yn = -ellipseRadii.Y * (float)Math.Sin(ellipseAngle);
+            float x = xn * ellipseRotation.X - yn * ellipseRotation.Y;
+            float y = xn * ellipseRotation.Y + yn * ellipseRotation.X;
+            Vec2Float signs = new Vec2Float(Math.Sign(133 - ellipseRadii.X), Math.Sign(99 - ellipseRadii.Y));
+            ellipseRadii.X += signs.X * 1.5f;
+            ellipseRadii.Y += signs.Y * 1.5f;
+            /*
             int sign1 = rand.Next(0, 1) == 0 ? -1 : 1;
             int sign2 = rand.Next(0, 1) == 0 ? -1 : 1;
             x += (float)rand.NextDouble() * 150 * sign1;
             y += (float)rand.NextDouble() * 10 * sign2;
-            Mouse_Event(0x1 | 0x8000, (int)x, (int)y, 0, 0);
+            */
+            ellipseAngle += ANGLE_INCREMENT;
+
+            velocity.X = x - cursorPos.X + center.X + ellipseTranslation.X;
+            velocity.Y = y - cursorPos.Y + center.Y + ellipseTranslation.Y;
+            //Mouse_Event(0x1, (int)x - cursorPos.X + (int)center.X + rand.Next(-20, 20), (int)y - cursorPos.Y + (int)center.Y + rand.Next(-20, 20), 0, 0);
         }
         
         private void AutoPilotSlider(HitObject currHitObject, int offset)
@@ -246,7 +258,7 @@ namespace osu_nhauto
                     missing.Zero();
                     if (currentTime >= currHitObject.Time - 50)
                         AutoPilotSpinner();
-                    return;
+                    break;
             }
 
             missing.Add(velocity.X - (int)velocity.X, velocity.Y - (int)velocity.Y);
@@ -299,7 +311,12 @@ namespace osu_nhauto
             if ((currHitObject.Type & (HitObjectType)0b1000_1011) == HitObjectType.Spinner)
             {
                 Vec2Float center = ResolutionUtils.CenterPos;
-                ellipseAngle = Math.Atan2(cursorPos.Y - center.Y, cursorPos.X - center.X);
+                float centerDist = (float)Math.Sqrt(Math.Pow(cursorPos.X - center.X, 2) + Math.Pow(cursorPos.Y - center.Y, 2));
+                ellipseRadii = new Vec2Float(centerDist, centerDist);
+                ellipseTranslation.Zero();
+                ellipseRotation = new Vec2Float(1, 0);
+                ellipseRotAngle = 0;
+                ellipseAngle = Math.Atan2(center.Y - cursorPos.Y, cursorPos.X - center.X);
                 velocity.Zero();
                 return;
             }
@@ -365,7 +382,10 @@ namespace osu_nhauto
         private CurrentBeatmap beatmap;
         private POINT cursorPos, cursorPos2 = new POINT(-1, -1);
         private Vec2Float velocity, missing;
+        private Vec2Float ellipseRadii;
+        private Vec2Float ellipseRotation, ellipseTranslation;
         private Osu.SCORE_DATA? scoreData = null;
+        private float ellipseRotAngle = 0.79f;
         private float speedMod = 1;
         private float timeDiffThreshold;
         private int currentTime;
