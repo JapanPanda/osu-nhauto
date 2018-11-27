@@ -1,6 +1,7 @@
 ﻿using osu_database_reader;
 using osu_database_reader.Components;
 using osu_database_reader.Components.Beatmaps;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -48,7 +49,7 @@ namespace osu_nhauto.HitObjects
             if (Time < timingPoints[mid].Time)
                 --mid;
 
-            mid = System.Math.Max(0, mid);
+            mid = Math.Max(0, mid);
             double msPerQuarter = timingPoints[mid].MsPerQuarter >= 0 ? timingPoints[mid].MsPerQuarter : 1000;
             double speedVelocity = timingPoints[mid].MsPerQuarter < 0 ? - 100 / timingPoints[mid].MsPerQuarter : 1;
             for (int i = mid + 1; i < timingPoints.Count; ++i)
@@ -69,18 +70,22 @@ namespace osu_nhauto.HitObjects
                     break;
                 }
             }
-            speedVelocity = System.Math.Max(0.1, speedVelocity);
-            speedVelocity = System.Math.Min(10, speedVelocity);
-            return (int)System.Math.Ceiling(PixelLength * RepeatCount / (100 * sliderVelocity * speedVelocity / msPerQuarter));
+            speedVelocity = Math.Max(0.1, speedVelocity);
+            speedVelocity = Math.Min(10, speedVelocity);
+            return (int)Math.Ceiling(PixelLength * RepeatCount / (100 * sliderVelocity * speedVelocity / msPerQuarter));
         }
 
         protected float GetTimeDiff(int currentTime)
         {
-            currentTime = System.Math.Min(currentTime, EndTime - 24);
+            currentTime = Math.Min(currentTime, EndTime - 24);
             if (currentTime <= Time)
                 return 0;
-
+            buzzRestFactor -= 0.005f;
+            buzzRestFactor = Math.Max(buzzRestFactor, 1.5f);
             int period = currentTime - Time;
+            if (TreatAsCircle)
+                return Math.Min(period, PathTime / buzzRestFactor);
+
             float timeDiff = period % PathTime;
             int repeatNumber = (int)(period / PathTime);
 
@@ -95,8 +100,10 @@ namespace osu_nhauto.HitObjects
 
         public Vec2Float GetPosition(int currentTime) => GetRelativePosition(currentTime).Add(X, Y);
 
-        public Vec2Float GetRelativePosition(int currentTime) => TreatAsCircle ? new Vec2Float(0, 0) : CalculateOffset(currentTime);
+        public Vec2Float GetRelativePosition(int currentTime) => CalculateOffset(currentTime);
 
         protected abstract Vec2Float CalculateOffset(int currentTime);
+
+        private float buzzRestFactor = 2.0f;
     }
 }

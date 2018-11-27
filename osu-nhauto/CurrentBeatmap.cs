@@ -169,19 +169,20 @@ namespace osu_nhauto {
                 }
             }
 
-            for (int i = 0; i < hitObjsTemp.Count; ++i)
-            {
-                if (hitObjsTemp[i].Type == HitObjectType.Slider)
-                {
-                    nhauto.HitObjectSlider slider = hitObjsTemp[i] as nhauto.HitObjectSlider;
-                    slider.TreatAsCircle = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - 24).Length() < (54.4f - 4.48f * CircleSize);
-                }
-            }
             timingPoints = timingPtsTemp.AsReadOnly();
             hitObjects = hitObjsTemp.AsReadOnly();
 
             ModifySettingsByModValue();
             ApplyStacking(); // TODO check file format version < 6
+
+            for (int i = 0; i < hitObjsTemp.Count; ++i)
+            {
+                if (hitObjsTemp[i].Type == HitObjectType.Slider)
+                {
+                    nhauto.HitObjectSlider slider = hitObjsTemp[i] as nhauto.HitObjectSlider;
+                    slider.TreatAsCircle = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - 24).Length() < (54.4f - 4.48f * CircleSize) * 2.4f;
+                }
+            }
 
             stopwatch.Stop();
             Console.WriteLine($"Elapsed time to parse beatmap: {stopwatch.ElapsedMilliseconds}ms");
