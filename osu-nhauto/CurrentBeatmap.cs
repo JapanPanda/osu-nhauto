@@ -175,12 +175,42 @@ namespace osu_nhauto {
             ModifySettingsByModValue();
             ApplyStacking(); // TODO check file format version < 6
 
+            float circleRadius = 54.4f - 4.48f * CircleSize;
+            float sliderBallCircleRadius = circleRadius * 2.4f;
+            int offsetBoundary = (int)(circleRadius / 3f);
+            Random rand = new Random();
+            Vector2? lastUnmodifiedPos = null;
+            Vector2 randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
             for (int i = 0; i < hitObjsTemp.Count; ++i)
             {
+                if (hitObjsTemp[i].Type == HitObjectType.Spinner)
+                    continue;
+
+                if (!lastUnmodifiedPos.HasValue)
+                    lastUnmodifiedPos = new Vector2(hitObjsTemp[i].X, hitObjsTemp[i].Y);
+                else if (i > 0 && hitObjsTemp[i].Time - hitObjsTemp[i - 1].Time > 116)
+                    randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
+                else
+                {
+                    hitObjsTemp[i].Streamable = true;
+                    randOffset.X += rand.Next(-3 - randOffset.X, 3 - randOffset.X);
+                    randOffset.Y += rand.Next(-3 - randOffset.Y, 3 - randOffset.Y);
+                }
+
+                lastUnmodifiedPos = new Vector2(hitObjsTemp[i].X, hitObjsTemp[i].Y);
+                hitObjsTemp[i].X += randOffset.X;
+                hitObjsTemp[i].Y += randOffset.Y;
+
                 if (hitObjsTemp[i].Type == HitObjectType.Slider)
                 {
                     nhauto.HitObjectSlider slider = hitObjsTemp[i] as nhauto.HitObjectSlider;
-                    slider.TreatAsCircle = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - 24).Length() < (54.4f - 4.48f * CircleSize) * 2.4f;
+                    for (int j = 0; j < slider.Points.Count; ++j)
+                    {
+                        Vector2 pt = slider.Points[j];
+                        pt.X += randOffset.X;
+                        pt.Y += randOffset.Y;
+                    }
+                    slider.TreatAsCircle = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - 24).Length() < sliderBallCircleRadius;
                 }
             }
 

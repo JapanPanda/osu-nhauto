@@ -10,6 +10,7 @@ namespace osu_nhauto.HitObjects
         public int EndTime { get; protected set; }
         public int StackHeight { get; set; }
         public HitObjectType Type { get; private set; }
+        public bool Streamable { get; set; }
 
         protected HitObject(osu_database_reader.Components.HitObjects.HitObject hollyObj, bool vInvert)
         {

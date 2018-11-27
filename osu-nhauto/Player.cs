@@ -322,7 +322,7 @@ namespace osu_nhauto
             }
 
             // TODO check if in middle of stream
-            int timeDiff = currHitObject.Time - currentTime - 50;
+            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? 1 : 50);
             velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Max(1, timeDiff));
         }
 

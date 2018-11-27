@@ -11,7 +11,7 @@ namespace osu_nhauto.HitObjects
     {
         public double PixelLength { get; private set; }
         public int RepeatCount { get; private set; }
-        public ReadOnlyCollection<Vector2> Points { get; private set; }
+        public List<Vector2> Points;
         public CurveType Curve;
         public int Duration { get; private set; }
         public float PathTime { get; private set; }
@@ -26,7 +26,7 @@ namespace osu_nhauto.HitObjects
 
             PixelLength = hollyObj.Length;
             RepeatCount = hollyObj.RepeatCount;
-            Points = hollyObj.Points.AsReadOnly();
+            Points = hollyObj.Points;
             Curve = hollyObj.CurveType;
             Duration = CalculateSliderDuration(sliderVelocity, timingPoints);
             EndTime = Time + Duration;
