@@ -196,17 +196,17 @@ namespace osu_nhauto
                 ellipseRotation.Y = (float)Math.Sin(ellipseRotAngle);
                 ellipseRadii.X += 20 * (float)(0.75 + rand.NextDouble());
                 ellipseRadii.Y += 20 * (float)(0.75 + rand.NextDouble());
-                ellipseTranslation.X += rand.Next(-15 - (int)ellipseTranslation.X, 15 - (int)ellipseTranslation.X);
-                ellipseTranslation.Y += rand.Next(-15 - (int)ellipseTranslation.Y, 15 - (int)ellipseTranslation.Y);
+                ellipseTranslation.X += rand.Next(-6 - (int)ellipseTranslation.X, 6 - (int)ellipseTranslation.X) * ResolutionUtils.Ratio.X;
+                ellipseTranslation.Y += rand.Next(-6 - (int)ellipseTranslation.Y, 6 - (int)ellipseTranslation.Y) * ResolutionUtils.Ratio.Y;
             }
 
-            float xn = ellipseRadii.X * (float)Math.Cos(ellipseAngle);
-            float yn = -ellipseRadii.Y * (float)Math.Sin(ellipseAngle);
+            float xn = ellipseRadii.X * (float)Math.Cos(ellipseAngle) * ResolutionUtils.Ratio.X;
+            float yn = -ellipseRadii.Y * (float)Math.Sin(ellipseAngle) * ResolutionUtils.Ratio.Y;
             float x = xn * ellipseRotation.X - yn * ellipseRotation.Y;
             float y = xn * ellipseRotation.Y + yn * ellipseRotation.X;
-            Vec2Float signs = new Vec2Float(Math.Sign(133 - ellipseRadii.X), Math.Sign(99 - ellipseRadii.Y));
-            ellipseRadii.X += signs.X * 1.5f;
-            ellipseRadii.Y += signs.Y * 1.5f;
+            Vec2Float signs = new Vec2Float(Math.Sign(66 - ellipseRadii.X), Math.Sign(44 - ellipseRadii.Y));
+            ellipseRadii.X += signs.X * 25;
+            ellipseRadii.Y += signs.Y * 25;
             /*
             int sign1 = rand.Next(0, 1) == 0 ? -1 : 1;
             int sign2 = rand.Next(0, 1) == 0 ? -1 : 1;
@@ -391,7 +391,7 @@ namespace osu_nhauto
         private int currentTime;
         private KeyPressed keyPressed = KeyPressed.None;
 
-        private const double ANGLE_INCREMENT = Math.PI / 18;
+        private const double ANGLE_INCREMENT = Math.PI / 16;
         private const float TWO_PI = 2 * (float)Math.PI;
 
         private enum KeyPressed
