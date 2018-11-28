@@ -72,8 +72,8 @@ namespace osu_nhauto {
             ModValue = MainWindow.osu.GetModValue();
             if (!ModValue.HasValue)
                 Console.WriteLine("WARNING: Mod value not found. Assuming NoMod.");
-            
-            bool shouldVInvert = ModValue.HasValue && (ModValue.Value & (int)Mods.HardRock) > 0;
+
+            bool modifiedSettings = false;
             List<TimingPoint> timingPtsTemp = new List<TimingPoint>();
             List<nhauto.HitObject> hitObjsTemp = new List<nhauto.HitObject>();
             using (var sr = new StreamReader(File.OpenRead(filePath)))
@@ -108,7 +108,12 @@ namespace osu_nhauto {
                         timingPtsTemp.Add(TimingPoint.FromString(line));
                     else if (startParsing == 2)
                     {
-                        float sliderFollowCircleSize = (54.4f - 4.48f * CircleSize) * 2.2f;
+                        if (!modifiedSettings)
+                        {
+                            CirclePxRadius = (float)(54.4 - 4.48 * CircleSize);
+                            ModifySettingsByModValue();
+                            modifiedSettings = true;
+                        }
                         holly.HitObject hollyObj = holly.HitObject.FromString(line);
                         switch (hollyObj.Type & (HitObjectType)0b1000_1011)
                         {
@@ -172,50 +177,95 @@ namespace osu_nhauto {
             timingPoints = timingPtsTemp.AsReadOnly();
             hitObjects = hitObjsTemp.AsReadOnly();
 
-            ModifySettingsByModValue();
-            ApplyStacking(); // TODO check file format version < 6
+            ApplyStacking(); // TODO check file format version < 6           
 
-            float circleRadius = 54.4f - 4.48f * CircleSize;
-            float sliderBallCircleRadius = circleRadius * 2.4f;
-            int offsetBoundary = (int)(circleRadius / 3f);
+            ApplyHumanStuff();
+
+            stopwatch.Stop();
+            Console.WriteLine($"Elapsed time to parse beatmap: {stopwatch.ElapsedMilliseconds}ms");
+        }
+
+        private void ApplyHumanStuff()
+        {
+            int offsetBoundary = Math.Max(4, (int)(CirclePxRadius / 2.5f));
             Random rand = new Random();
             Vector2? lastUnmodifiedPos = null;
             Vector2 randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
-            for (int i = 0; i < hitObjsTemp.Count; ++i)
+            for (int i = 0; i < hitObjects.Count; ++i)
             {
-                if (hitObjsTemp[i].Type == HitObjectType.Spinner)
+                if (hitObjects[i].Type == HitObjectType.Spinner)
                     continue;
 
                 if (!lastUnmodifiedPos.HasValue)
-                    lastUnmodifiedPos = new Vector2(hitObjsTemp[i].X, hitObjsTemp[i].Y);
-                else if (i > 0 && hitObjsTemp[i].Time - hitObjsTemp[i - 1].Time > 116)
+                    lastUnmodifiedPos = new Vector2(hitObjects[i].X, hitObjects[i].Y);
+                else if (i > 0 && hitObjects[i].Time - hitObjects[i - 1].Time > TimeDiffThreshold)
                     randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
                 else
                 {
-                    hitObjsTemp[i].Streamable = true;
+                    hitObjects[i].Streamable = true;
                     randOffset.X += rand.Next(-3 - randOffset.X, 3 - randOffset.X);
                     randOffset.Y += rand.Next(-3 - randOffset.Y, 3 - randOffset.Y);
                 }
 
-                lastUnmodifiedPos = new Vector2(hitObjsTemp[i].X, hitObjsTemp[i].Y);
-                hitObjsTemp[i].X += randOffset.X;
-                hitObjsTemp[i].Y += randOffset.Y;
+                lastUnmodifiedPos = new Vector2(hitObjects[i].X, hitObjects[i].Y);
+                hitObjects[i].X += randOffset.X;
+                hitObjects[i].Y += randOffset.Y;
 
-                if (hitObjsTemp[i].Type == HitObjectType.Slider)
+                if (hitObjects[i].Type == HitObjectType.Slider)
                 {
-                    nhauto.HitObjectSlider slider = hitObjsTemp[i] as nhauto.HitObjectSlider;
+                    nhauto.HitObjectSlider slider = hitObjects[i] as nhauto.HitObjectSlider;
                     for (int j = 0; j < slider.Points.Count; ++j)
                     {
                         Vector2 pt = slider.Points[j];
                         pt.X += randOffset.X;
                         pt.Y += randOffset.Y;
                     }
-                    slider.TreatAsCircle = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - 24).Length() < sliderBallCircleRadius;
+
+                    int projOffset = (int)(16f * SpeedModifier);
+                    Vec2Float projectedEnd = slider.GetPosition(slider.EndTime - projOffset);
+                    Vec2Float actualEnd = slider.GetPosition(slider.EndTime);
+                    if (i < hitObjects.Count - 1)
+                    {
+                        Vec2Float velProjActual = new Vec2Float(projectedEnd.X - actualEnd.X, actualEnd.Y - projectedEnd.Y);
+                        Vec2Float velActualNext = new Vec2Float(hitObjects[i + 1].X - actualEnd.X, actualEnd.Y - hitObjects[i + 1].Y);
+                        double angle = Math.Acos((velProjActual.X * velActualNext.X + velProjActual.Y * velActualNext.Y) / (velProjActual.Length() * velActualNext.Length()));
+                        if (angle >= 2.79)
+                        {
+                            slider.timeStop = Math.Max(slider.Time, slider.EndTime - 5);
+                            slider.timeStopFactor = 0.95f;
+                        }
+                        else
+                            slider.timeStopFactor = Math.Min(slider.timeStopFactor, 0.95f * (float)angle / 2.79f); // 2.3562
+                    }
+
+                    float distToBall = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - projOffset).Distance(slider.GetRelativePosition(slider.Time));
+
+                    if (slider.PixelLength <= CirclePxRadius || slider.Duration <= projOffset)
+                        slider.TreatAsCircle = 2;
+                    else if (distToBall <= SliderBallPxRadius / 1.75f)
+                        slider.TreatAsCircle = 1;
+
+                    if (slider is nhauto.HitObjectSliderPerfect && (slider as nhauto.HitObjectSliderPerfect).circleRadius < SliderBallPxRadius / 3)
+                        slider.TreatAsCircle = 2;
+
+                    if (slider is nhauto.HitObjectSliderBezier && (slider as nhauto.HitObjectSliderBezier).maxDistFromHead < SliderBallPxRadius)
+                        slider.TreatAsCircle = 1;
+
+                    if (slider.TreatAsCircle == 0 && !slider.timeStop.HasValue)
+                    {
+                        int stop = slider.EndTime - projOffset;
+                        while (stop > slider.Time && projectedEnd.Distance(slider.GetPosition(stop)) <= SliderBallPxRadius / 1.75f)
+                            stop -= 4;
+                        slider.timeStop = Math.Max(slider.Time, stop);
+                    }
+
+                    if (slider.TreatAsCircle > 0 && slider.Duration <= TimeDiffThreshold / 2)
+                    {
+                        slider.timeStop = slider.Time;
+                        slider.timeStopFactor = 0;
+                    }
                 }
             }
-
-            stopwatch.Stop();
-            Console.WriteLine($"Elapsed time to parse beatmap: {stopwatch.ElapsedMilliseconds}ms");
         }
 
         private void ModifySettingsByModValue()
@@ -229,6 +279,7 @@ namespace osu_nhauto {
                 CircleSize = Math.Min(10, CircleSize * 1.3f);
                 ApproachRate = Math.Min(10, ApproachRate * 1.4f);
                 JudgementDifficulty = Math.Min(10, JudgementDifficulty * 1.4f);
+                shouldVInvert = true;
             }
             else if ((ModValue.Value & (int)Mods.Easy) > 0)
             {
@@ -237,6 +288,19 @@ namespace osu_nhauto {
                 ApproachRate *= 0.5f;
                 JudgementDifficulty *= 0.5f;
             }
+
+            if ((ModValue.Value & (int)(Mods.DoubleTime | Mods.Nightcore)) > 0)
+            {
+                Console.WriteLine("Detected DoubleTime");
+                SpeedModifier = 1.5f;
+            }
+            else if ((ModValue.Value & (int)Mods.HalfTime) > 0)
+            {
+                Console.WriteLine("Detected HalfTime");
+                SpeedModifier = 0.75f;
+            }
+            else
+                SpeedModifier = 1;
         }
 
         private void ApplyStacking()
@@ -245,12 +309,7 @@ namespace osu_nhauto {
             for (int i = 0; i < stackHeightsTemp.Capacity; ++i)
                 stackHeightsTemp.Add(0);
 
-            float timePreempt = 1200;
-            if (ApproachRate > 5)
-                timePreempt -= 750 * (ApproachRate - 5) / 5;
-            else if (ApproachRate < 5)
-                timePreempt += 600 * (5 - ApproachRate) / 5;
-            float stackThreshold = timePreempt * StackLeniency;
+            float stackThreshold = TimePreempt * StackLeniency;
             for (int i = hitObjects.Count - 1; i > 0; --i)
             {
                 nhauto.HitObject objectI = hitObjects[i];
@@ -322,12 +381,20 @@ namespace osu_nhauto {
         public float SliderVelocity { get; private set; }
         public int SliderTickRate { get; private set; }
 
+        public float CirclePxRadius { get; private set; }
+        public float SliderBallPxRadius { get => CirclePxRadius * 2.3f; }
+        public float SpeedModifier { get; private set; } = 1;
+        public float TimePreempt { get => ApproachRate == 5 ? 1200 : 1200 + (ApproachRate > 5 ? -750 : 600) * (ApproachRate - 5) / 5; }
+        public float TimeFadeIn { get => TimePreempt * 2 / 3; }
+        public int TimeDiffThreshold { get => (int)(116 * SpeedModifier); }
         public int? ModValue { get; private set; }
 
         private InterProcessOsu ipc;
         private string filePath = null;
         private ReadOnlyCollection<TimingPoint> timingPoints = null;
         private ReadOnlyCollection<nhauto.HitObject> hitObjects = null;
+
+        private bool shouldVInvert = false;
 
         private const int STACK_LENIENCE = 3;
     }

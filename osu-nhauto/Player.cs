@@ -64,9 +64,7 @@ namespace osu_nhauto
         {
             try
             {
-                BeatmapUtils.InitializeBeatmap(beatmap);
-                speedMod = GetSpeedModifier();
-                timeDiffThreshold = 116 * speedMod;
+                beatmap.Parse();
                 Update();
             }
             catch (ThreadAbortException)
@@ -86,7 +84,7 @@ namespace osu_nhauto
             velocity.Zero();
             missing.Zero();
             while (MainWindow.osu.GetAudioTime() == 0) { Thread.Sleep(1); }
-            while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - BeatmapUtils.TimeFadeIn / 2) { Thread.Sleep(1); }
+            while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - beatmap.TimeFadeIn / 2) { Thread.Sleep(1); }
             Console.WriteLine("Now listening for time changes");
             int lastTime = MainWindow.osu.GetAudioTime();
             scoreData = null;
@@ -122,6 +120,12 @@ namespace osu_nhauto
                             {
                                 scoreData = MainWindow.osu.GetScoreData() ?? scoreData;
                                 currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
+                                while (currHitObject != null && currentTime <= currHitObject.Time - beatmap.TimePreempt + 190)
+                                {
+                                    currentTime = MainWindow.osu.GetAudioTime() + 6;
+                                    Thread.Sleep(1);
+                                }
+
                                 if (currHitObject != null)
                                     GetVelocities(currHitObject);
                                 else
@@ -163,7 +167,7 @@ namespace osu_nhauto
             }
 
             Vec2Float objDistVec = GetDistanceVectorFromObject(currHitObject);
-            float maxDrawnRadius = BeatmapUtils.CirclePxRadius * ResolutionUtils.Ratio.X;
+            float maxDrawnRadius = beatmap.CirclePxRadius * ResolutionUtils.Ratio.X;
             float objDist = objDistVec.Distance(0, 0);
             velocity.Multiply(offset);
             
@@ -288,12 +292,12 @@ namespace osu_nhauto
             if (!relaxRunning)
                 return;
 
-            shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < timeDiffThreshold ? !shouldPressSecondary : false;
+            shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < beatmap.TimeDiffThreshold ? !shouldPressSecondary : false;
             keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
             //Thread.Sleep(2);
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / speedMod, 16)).ContinueWith(ant =>
+            Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
             {
                 inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
                 if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
@@ -320,10 +324,9 @@ namespace osu_nhauto
                 velocity.Zero();
                 return;
             }
-
-            // TODO check if in middle of stream
-            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? 1 : 50);
-            velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Max(1, timeDiff));
+            sliderBallRandSettings.Zero();
+            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? (currHitObject.Type == HitObjectType.Normal ? 1 : 15) : 50);
+            velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Min(1000, Math.Max(1, timeDiff)));
         }
 
         private Vec2Float GetDistanceVectorFromObject(HitObject hitObj)
@@ -334,23 +337,6 @@ namespace osu_nhauto
 
         private Vec2Float GetDistanceVectorFromTwoObjects(HitObject obj1, HitObject obj2) =>
             new Vec2Float(ResolutionUtils.ConvertToScreenXCoord(obj2.X - obj1.X), ResolutionUtils.ConvertToScreenYCoord(obj2.Y - obj1.Y));
-
-        private float GetSpeedModifier()
-        {
-            if (!beatmap.ModValue.HasValue)
-                return 1;
-            if ((beatmap.ModValue.Value & (int)(Mods.DoubleTime | Mods.Nightcore)) > 0)
-            {
-                Console.WriteLine("Detected DoubleTime");
-                return 1.5f;
-            }
-            if ((beatmap.ModValue.Value & (int)Mods.HalfTime) > 0)
-            {
-                Console.WriteLine("Detected HalfTime");
-                return 0.75f;
-            }
-            return 1;
-        }
 
         private void PrintScoreData()
         {
@@ -384,10 +370,9 @@ namespace osu_nhauto
         private Vec2Float velocity, missing;
         private Vec2Float ellipseRadii;
         private Vec2Float ellipseRotation, ellipseTranslation;
+        private Vec2Float sliderBallRandSettings;
         private Osu.SCORE_DATA? scoreData = null;
         private float ellipseRotAngle = 0.79f;
-        private float speedMod = 1;
-        private float timeDiffThreshold;
         private int currentTime;
         private KeyPressed keyPressed = KeyPressed.None;
 

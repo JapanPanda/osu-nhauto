@@ -105,7 +105,6 @@ namespace osu_nhauto
                             currentBeatmapPath = beatmap.Get();
                             if (currentBeatmapPath != null)
                             {
-                                beatmap.Parse();
                                 player.SetBeatmap(beatmap);
 
                                 if (playerUpdate.ThreadState == System.Threading.ThreadState.Unstarted)

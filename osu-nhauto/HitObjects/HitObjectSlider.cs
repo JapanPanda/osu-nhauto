@@ -13,9 +13,12 @@ namespace osu_nhauto.HitObjects
         public int RepeatCount { get; private set; }
         public List<Vector2> Points;
         public CurveType Curve;
-        public int Duration { get; private set; }
+        public int Duration { get; set; }
         public float PathTime { get; private set; }
-        public bool TreatAsCircle { get; set; }
+        public int TreatAsCircle { get; set; }
+
+        public int? timeStop;
+        public float timeStopFactor = 0.925f;
 
         public HitObjectSlider(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, vInvert)
@@ -77,14 +80,20 @@ namespace osu_nhauto.HitObjects
 
         protected float GetTimeDiff(int currentTime)
         {
-            currentTime = Math.Min(currentTime, EndTime - 24);
+            // circular >> linear motion
+            if (timeStop.HasValue && currentTime > timeStop.Value)
+                currentTime = timeStop.Value + (int)((currentTime - timeStop.Value) * timeStopFactor);
             if (currentTime <= Time)
                 return 0;
-            buzzRestFactor -= 0.005f;
-            buzzRestFactor = Math.Max(buzzRestFactor, 1.5f);
+
             int period = currentTime - Time;
-            if (TreatAsCircle)
+            if (TreatAsCircle == 1)
+            {
+                buzzRestFactor = Math.Max(buzzRestFactor - 0.01f, 2.5f);
                 return Math.Min(period, PathTime / buzzRestFactor);
+            }
+            else if (TreatAsCircle == 2)
+                return 0;
 
             float timeDiff = period % PathTime;
             int repeatNumber = (int)(period / PathTime);
@@ -104,6 +113,6 @@ namespace osu_nhauto.HitObjects
 
         protected abstract Vec2Float CalculateOffset(int currentTime);
 
-        private float buzzRestFactor = 2.0f;
+        private float buzzRestFactor = 3.0f;
     }
 }

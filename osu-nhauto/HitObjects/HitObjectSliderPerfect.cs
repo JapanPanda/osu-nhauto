@@ -7,7 +7,7 @@ namespace osu_nhauto.HitObjects
     public class HitObjectSliderPerfect : HitObjectSlider
     {
         private readonly Vec2Float circleCenter;
-        private readonly float circleRadius;
+        public readonly float circleRadius;
         private readonly float startAngle;
         private readonly float endAngle;
 
@@ -49,7 +49,7 @@ namespace osu_nhauto.HitObjects
             circleRadius = (float)Math.Sqrt(Math.Pow(X - circleCenter.X, 2) + Math.Pow(Y - circleCenter.Y, 2));
             float arcAngle = (float)PixelLength / circleRadius;
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
-            }
+        }
 
         protected override Vec2Float CalculateOffset(int currentTime)
         {

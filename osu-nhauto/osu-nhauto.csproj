@@ -105,7 +105,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="BeatmapUtils.cs" />
     <Compile Include="CurrentBeatmap.cs" />
     <Compile Include="HitObjects\HitObjectSliderCatmull.cs" />
     <Compile Include="HitObjects\HitObjectCircle.cs" />

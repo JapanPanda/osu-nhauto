@@ -16,6 +16,8 @@ namespace osu_nhauto.HitObjects
         private const float bezier_tolerance = 0.0625f;
         private int count;
 
+        public float maxDistFromHead = 0;
+
         public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
@@ -68,6 +70,9 @@ namespace osu_nhauto.HitObjects
                 calculatedPath[calculatedPath.Count - 1].Add(diff.Multiply((float)((PixelLength - l) / d)));
                 cumulativeLength[calculatedPath.Count - 1] = PixelLength;
             }
+
+            for (int i = 0; i < calculatedPath.Count; ++i)
+                maxDistFromHead = Math.Max(maxDistFromHead, calculatedPath[i].Length());
         }
 
         protected override Vec2Float CalculateOffset(int currentTime)
