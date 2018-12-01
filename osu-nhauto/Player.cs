@@ -75,65 +75,60 @@ namespace osu_nhauto
 
         public void Update()
         {
-            bool continueRunning = false;
-            int nextHitObjIndex = 0;
-            HitObject lastHitObject = null;
-            HitObject currHitObject = beatmap.GetHitObjects()[0];
-            bool shouldPressSecondary = false, initialVelocity = false;
-            ResolutionUtils.CalculatePlayfieldResolution();
             velocity.Zero();
             missing.Zero();
+            bool continueRunning = false;
+            int avgHumanReaction = (int)beatmap.TimePreempt + 190;
+            var hitObjIterator = beatmap.GetHitObjects().GetEnumerator();
+            hitObjIterator.MoveNext();
+            HitObject lastHitObject = null, currHitObject = hitObjIterator.Current;
+            bool shouldPressSecondary = false, initialVelocity = false, shouldGetVelocitiesBeforeClick = false;
+            ResolutionUtils.CalculatePlayfieldResolution();
             while (MainWindow.osu.GetAudioTime() == 0) { Thread.Sleep(1); }
-            while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - beatmap.TimeFadeIn / 2) { Thread.Sleep(1); }
+            while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - avgHumanReaction) { Thread.Sleep(1); }
             Console.WriteLine("Now listening for time changes");
             int lastTime = MainWindow.osu.GetAudioTime();
-            scoreData = null;
-            POINT lastPos = new POINT(0, 0);
+            double randomLate = GetDecimal();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
-                GetCursorPos(out cursorPos);
-                //Console.WriteLine($"{cursorPos.X} {cursorPos.Y}");
-                lastPos = cursorPos;
+                Thread.Sleep(1);
                 currentTime = MainWindow.osu.GetAudioTime() + 6;
                 if (currentTime > lastTime)
                 {
                     if (currHitObject != null)
                     {
-                        if (nextHitObjIndex == 0 && !initialVelocity)
+                        if (!initialVelocity)
                         {
-                            GetCursorPos(out cursorPos);
-                            //Mouse_Event(0x1 | 0x8000, cursorPos.X * 65535 / 1920, cursorPos.Y * 65535 / 1080, 0, 0);
                             GetVelocities(currHitObject);
                             initialVelocity = true;
                         }
                         AutoPilot(currHitObject, currentTime - lastTime);
 
-                        if (currHitObject.Time - currentTime <= 15)
+                        if (!shouldGetVelocitiesBeforeClick && currHitObject.Time - currentTime <= 20 - randomLate)
                         {
                             if (currHitObject != lastHitObject)
                             {
+                                randomLate = GetDecimal();
                                 Relax(currHitObject, lastHitObject, ref shouldPressSecondary);
                                 lastHitObject = currHitObject;
                             }
 
                             if (currentTime >= currHitObject.EndTime + 8)
                             {
-                                scoreData = MainWindow.osu.GetScoreData() ?? scoreData;
-                                currHitObject = ++nextHitObjIndex < beatmap.GetHitObjects().Count ? beatmap.GetHitObjects()[nextHitObjIndex] : null;
-                                while (currHitObject != null && currentTime <= currHitObject.Time - beatmap.TimePreempt + 190)
+                                if (hitObjIterator.MoveNext())
                                 {
-                                    currentTime = MainWindow.osu.GetAudioTime() + 6;
-                                    Thread.Sleep(1);
+                                    currHitObject = hitObjIterator.Current;
+                                    shouldGetVelocitiesBeforeClick = true;
                                 }
-
-                                if (currHitObject != null)
-                                    GetVelocities(currHitObject);
                                 else
-                                {
-                                    PrintScoreData();
                                     break;
-                                }
                             }
+                        }
+
+                        if (shouldGetVelocitiesBeforeClick && currentTime >= currHitObject.Time - avgHumanReaction)
+                        {
+                            GetVelocities(currHitObject);
+                            shouldGetVelocitiesBeforeClick = false;
                         }
                     }
                     else
@@ -146,13 +141,14 @@ namespace osu_nhauto
                     continueRunning = true;
                     break;
                 }
-
-                Thread.Sleep(1);
             }
             inputSimulator.Keyboard.KeyUp(keyCode1);
             inputSimulator.Keyboard.KeyUp(keyCode2);
+
             if (continueRunning)
                 Update();
+            else
+                PrintScoreData();
         }
 
         private void AutoPilotCircle(HitObject currHitObject, int offset)
@@ -211,17 +207,10 @@ namespace osu_nhauto
             Vec2Float signs = new Vec2Float(Math.Sign(66 - ellipseRadii.X), Math.Sign(55 - ellipseRadii.Y));
             ellipseRadii.X += signs.X * 5;
             ellipseRadii.Y += signs.Y * 5;
-            /*
-            int sign1 = rand.Next(0, 1) == 0 ? -1 : 1;
-            int sign2 = rand.Next(0, 1) == 0 ? -1 : 1;
-            x += (float)rand.NextDouble() * 150 * sign1;
-            y += (float)rand.NextDouble() * 10 * sign2;
-            */
             ellipseAngle += ANGLE_INCREMENT;
 
             velocity.X = x - cursorPos.X + center.X + ellipseTranslation.X;
             velocity.Y = y - cursorPos.Y + center.Y + ellipseTranslation.Y;
-            //Mouse_Event(0x1, (int)x - cursorPos.X + (int)center.X + rand.Next(-20, 20), (int)y - cursorPos.Y + (int)center.Y + rand.Next(-20, 20), 0, 0);
         }
         
         private void AutoPilotSlider(HitObject currHitObject, int offset)
@@ -293,7 +282,6 @@ namespace osu_nhauto
             double num2 = 1 - rand.NextDouble();
             double randStdNorm = Math.Sqrt(-2.0 * Math.Log(num1)) * Math.Sin(2.0 * Math.PI * num2);
             double randNormal = 10 + randStdNorm;
-            Console.WriteLine(randNormal);
             return randNormal;
         }
 
@@ -303,18 +291,18 @@ namespace osu_nhauto
                 return;
 
             shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < beatmap.TimeDiffThreshold ? !shouldPressSecondary : false;
-            keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay((int)GetDecimal()).ContinueWith(sec =>
-            {
-                inputSimulator.Keyboard.KeyDown(pressedSecondary ? keyCode2 : keyCode1);
+            if (inputSimulator.InputDeviceState.IsKeyDown(pressedSecondary ? keyCode2 : keyCode1))
+                pressedSecondary = !pressedSecondary;
 
-                Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
-                {
-                    inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
-                    if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
-                        keyPressed = KeyPressed.None;
-                });
+            keyPressed = pressedSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
+            inputSimulator.Keyboard.KeyDown(pressedSecondary ? keyCode2 : keyCode1);
+
+            Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
+            {
+                inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
+                if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
+                    keyPressed = KeyPressed.None;
             });
             //Thread.Sleep(2);
         }
@@ -340,7 +328,7 @@ namespace osu_nhauto
             }
             sliderBallRandSettings.Zero();
             int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? (currHitObject.Type == HitObjectType.Normal ? 1 : 15) : 50);
-            velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Min(1000, Math.Max(1, timeDiff)));
+            velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Min(250, Math.Max(1, timeDiff)));
         }
 
         private Vec2Float GetDistanceVectorFromObject(HitObject hitObj)
@@ -354,6 +342,7 @@ namespace osu_nhauto
 
         private void PrintScoreData()
         {
+            Osu.SCORE_DATA? scoreData = MainWindow.osu.GetScoreData();
             if (scoreData.HasValue)
             {
                 Osu.SCORE_DATA fscoreData = scoreData.Value;
@@ -385,7 +374,6 @@ namespace osu_nhauto
         private Vec2Float ellipseRadii;
         private Vec2Float ellipseRotation, ellipseTranslation;
         private Vec2Float sliderBallRandSettings;
-        private Osu.SCORE_DATA? scoreData = null;
         private float ellipseRotAngle = 0.79f;
         private int currentTime;
         private KeyPressed keyPressed = KeyPressed.None;
