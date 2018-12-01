@@ -68,7 +68,7 @@ namespace osu_nhauto
                 audioPlaying = audioTime + 0x24;
                 Console.WriteLine($"audioTime={audioTime.ToString("X")}");
                 stopwatch.Restart();
-                int primitivePlaySession = memory.FindSignature(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" }, 0x2000000, 0x6000000);
+                int primitivePlaySession = memory.FindSignature(new string[] { "75", "30", "A1", "??", "??", "??", "??", "80", "B8" }, 0x2000000, 0x6000000, 0xF000000);
                 playSession = memory.ReadInt32(primitivePlaySession + 0x3);
                 Console.WriteLine($"playSession={playSession.ToString("X")}");
                 Console.WriteLine(primitivePlaySession.ToString("X"));
