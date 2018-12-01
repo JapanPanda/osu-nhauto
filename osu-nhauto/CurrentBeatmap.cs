@@ -203,8 +203,8 @@ namespace osu_nhauto {
                 else
                 {
                     hitObjects[i].Streamable = true;
-                    randOffset.X += rand.Next(-3 - randOffset.X, 3 - randOffset.X);
-                    randOffset.Y += rand.Next(-3 - randOffset.Y, 3 - randOffset.Y);
+                    randOffset.X += rand.Next(-1 - randOffset.X, 1 - randOffset.X);
+                    randOffset.Y += rand.Next(-1 - randOffset.Y, 1 - randOffset.Y);
                 }
 
                 lastUnmodifiedPos = new Vector2(hitObjects[i].X, hitObjects[i].Y);
@@ -214,16 +214,6 @@ namespace osu_nhauto {
                 if (hitObjects[i].Type == HitObjectType.Slider)
                 {
                     nhauto.HitObjectSlider slider = hitObjects[i] as nhauto.HitObjectSlider;
-                    for (int j = 0; j < slider.Points.Count; ++j)
-                    {
-                        Vector2 pt = slider.Points[j];
-                        pt.X += randOffset.X;
-                        pt.Y += randOffset.Y;
-
-                        if (slider is nhauto.HitObjectSliderPerfect)
-                            (slider as nhauto.HitObjectSliderPerfect).circleCenter.Add(randOffset.X, randOffset.Y);
-                    }
-
                     int projOffset = (int)(16f * SpeedModifier);
                     Vec2Float projectedEnd = slider.GetPosition(slider.EndTime - projOffset);
                     Vec2Float actualEnd = slider.GetPosition(slider.EndTime);
@@ -251,7 +241,7 @@ namespace osu_nhauto {
                     if (slider is nhauto.HitObjectSliderPerfect && (slider as nhauto.HitObjectSliderPerfect).circleRadius < SliderBallPxRadius / 3)
                         slider.TreatAsCircle = 2;
 
-                    if (slider is nhauto.HitObjectSliderBezier && (slider as nhauto.HitObjectSliderBezier).maxDistFromHead < SliderBallPxRadius)
+                    if (slider is nhauto.HitObjectSliderBezier && !(slider as nhauto.HitObjectSliderBezier).TreatAsLinear && (slider as nhauto.HitObjectSliderBezier).maxDistFromHead < SliderBallPxRadius)
                         slider.TreatAsCircle = 1;
 
                     if (slider.TreatAsCircle == 0 && !slider.timeStop.HasValue)
