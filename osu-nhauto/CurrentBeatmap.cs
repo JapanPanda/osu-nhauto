@@ -219,6 +219,9 @@ namespace osu_nhauto {
                         Vector2 pt = slider.Points[j];
                         pt.X += randOffset.X;
                         pt.Y += randOffset.Y;
+
+                        if (slider is nhauto.HitObjectSliderPerfect)
+                            (slider as nhauto.HitObjectSliderPerfect).circleCenter.Add(randOffset.X, randOffset.Y);
                     }
 
                     int projOffset = (int)(16f * SpeedModifier);

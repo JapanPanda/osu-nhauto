@@ -6,7 +6,7 @@ namespace osu_nhauto.HitObjects
 {
     public class HitObjectSliderPerfect : HitObjectSlider
     {
-        private readonly Vec2Float circleCenter;
+        public readonly Vec2Float circleCenter;
         public readonly float circleRadius;
         private readonly float startAngle;
         private readonly float endAngle;
