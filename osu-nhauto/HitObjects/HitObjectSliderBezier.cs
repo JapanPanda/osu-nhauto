@@ -25,7 +25,6 @@ namespace osu_nhauto.HitObjects
             foreach (Vector2 v in hollyObj.Points)
                 points.Add(new Vec2Float(v.X - X, v.Y - Y));
 
-            //TODO find sub-paths and process them
             int finalIndex = points.Count - 1;
             List<Vec2Float> subpath = new List<Vec2Float>();
             for (int i = 0; i <= finalIndex; ++i)
@@ -40,39 +39,41 @@ namespace osu_nhauto.HitObjects
                 }
             }
 
-            double l = 0;
-            cumulativeLength.Add(l);
-            for (int i = 0; i < calculatedPath.Count - 1; ++i)
-            {
-                Vec2Float diff = calculatedPath[i + 1].Clone().Subtract(calculatedPath[i]);
-                double d = diff.Distance(0, 0);
-                if (PixelLength - l < d)
-                {
-                    calculatedPath[i + 1] = calculatedPath[i].Clone().Add(diff.Multiply((float)((PixelLength - l) / d)));
-                    calculatedPath.RemoveRange(i + 2, calculatedPath.Count - 2 - i);
+            CalculateLength();
+            if (calculatedPath.Count == 0)
+                return;
 
-                    l = PixelLength;
-                    cumulativeLength.Add(l);
-                    break;
-                }
-                l += d;
-                cumulativeLength.Add(l);
+            double cumSum = 0;
+            Vec2Float baseVel = CalculateOffset(Time + 1);
+            Vec2Float endVel = CalculateOffset(Time + (int)PathTime).Subtract(CalculateOffset(Time + (int)PathTime - 1));
+            double angleRot = Math.Atan2(-baseVel.Y, baseVel.X);
+            double angleRot2 = Math.Atan2(-endVel.Y, endVel.X);
+            double maxVertDistFromHead = 0;
+            for (int i = Time + 2; i < Time + (int)PathTime - 1; i += 8)
+            {
+                Vec2Float offset = CalculateOffset(i);
+                Vec2Float offsetE = CalculateOffset(Time + (int)PathTime - i);
+                Vec2Float offsetD = offset.Clone().Subtract(baseVel);
+                maxDistFromHead = Math.Max(maxDistFromHead, offset.Length());               
+                Vec2Float rotBase = new Vec2Float(offsetD.X * (float)Math.Cos(angleRot) - offsetD.Y * (float)Math.Sin(angleRot), offsetD.X * (float)Math.Sin(angleRot) + offsetD.Y * (float)Math.Cos(angleRot));
+                Vec2Float offsetED = endVel.Clone().Subtract(offsetE);
+                Vec2Float rotEnd = new Vec2Float(offsetED.X * (float)Math.Cos(angleRot2) - offsetED.Y * (float)Math.Sin(angleRot2), offsetED.X * (float)Math.Sin(angleRot2) + offsetED.Y * (float)Math.Cos(angleRot2));
+                double rotY0 = offset.X * Math.Sin(angleRot) + offset.Y * Math.Cos(angleRot);
+                maxVertDistFromHead = Math.Max(maxVertDistFromHead, Math.Abs(rotY0));
+                cumSum += rotBase.Y - rotEnd.Y;
+                baseVel = offset;
+                endVel = offsetE;
             }
 
-            if (l < PixelLength && calculatedPath.Count > 1)
+            if (Math.Abs(cumSum) <= 15 && maxVertDistFromHead <= 40)
             {
-                Vec2Float diff = calculatedPath[calculatedPath.Count - 1].Clone().Subtract(calculatedPath[calculatedPath.Count - 2]);
-                double d = diff.Distance(0, 0);
-
-                if (d <= 0)
-                    return;
-
-                calculatedPath[calculatedPath.Count - 1].Add(diff.Multiply((float)((PixelLength - l) / d)));
-                cumulativeLength[calculatedPath.Count - 1] = PixelLength;
+                Console.WriteLine($"{Time} => possible linear-like curve");
+                Vec2Float end = CalculateOffset(Time + (int)PathTime);
+                PixelLength = end.Length();
+                calculatedPath = ApproximateBezier(new List<Vec2Float>(3) { new Vec2Float(0, 0), end, end });
+                CalculateLength();
             }
 
-            for (int i = 0; i < calculatedPath.Count; ++i)
-                maxDistFromHead = Math.Max(maxDistFromHead, calculatedPath[i].Length());
         }
 
         protected override Vec2Float CalculateOffset(int currentTime)
@@ -198,6 +199,40 @@ namespace osu_nhauto.HitObjects
                 Vec2Float a = new Vec2Float((l[index - 1].X + 2 * l[index].X + l[index + 1].X) * 0.25f,
                     (l[index - 1].Y + 2 * l[index].Y + l[index + 1].Y) * 0.25f);
                 output.Add(a);
+            }
+        }
+
+        private void CalculateLength()
+        {
+            double l = 0;
+            cumulativeLength.Add(l);
+            for (int i = 0; i < calculatedPath.Count - 1; ++i)
+            {
+                Vec2Float diff = calculatedPath[i + 1].Clone().Subtract(calculatedPath[i]);
+                double d = diff.Distance(0, 0);
+                if (PixelLength - l < d)
+                {
+                    calculatedPath[i + 1] = calculatedPath[i].Clone().Add(diff.Multiply((float)((PixelLength - l) / d)));
+                    calculatedPath.RemoveRange(i + 2, calculatedPath.Count - 2 - i);
+
+                    l = PixelLength;
+                    cumulativeLength.Add(l);
+                    break;
+                }
+                l += d;
+                cumulativeLength.Add(l);
+            }
+
+            if (l < PixelLength && calculatedPath.Count > 1)
+            {
+                Vec2Float diff = calculatedPath[calculatedPath.Count - 1].Clone().Subtract(calculatedPath[calculatedPath.Count - 2]);
+                double d = diff.Distance(0, 0);
+
+                if (d <= 0)
+                    return;
+
+                calculatedPath[calculatedPath.Count - 1].Add(diff.Multiply((float)((PixelLength - l) / d)));
+                cumulativeLength[calculatedPath.Count - 1] = PixelLength;
             }
         }
     }

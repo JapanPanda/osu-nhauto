@@ -9,7 +9,7 @@ namespace osu_nhauto.HitObjects
 {
     public abstract class HitObjectSlider : HitObject
     {
-        public double PixelLength { get; private set; }
+        public double PixelLength { get; protected set; }
         public int RepeatCount { get; private set; }
         public List<Vector2> Points;
         public CurveType Curve;
