@@ -18,6 +18,8 @@ namespace osu_nhauto.HitObjects
 
         public float maxDistFromHead = 0;
 
+        public bool TreatAsLinear { get; private set; }
+
         public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
         {
@@ -67,10 +69,12 @@ namespace osu_nhauto.HitObjects
 
             if (Math.Abs(cumSum) <= 15 && maxVertDistFromHead <= 40)
             {
+                TreatAsLinear = true;
                 Console.WriteLine($"{Time} => possible linear-like curve");
                 Vec2Float end = CalculateOffset(Time + (int)PathTime);
                 PixelLength = end.Length();
-                calculatedPath = ApproximateBezier(new List<Vec2Float>(3) { new Vec2Float(0, 0), end, end });
+                calculatedPath.Clear();
+                calculatedPath.AddRange(ApproximateBezier(new List<Vec2Float>(3) { new Vec2Float(0, 0), end, end }));
                 CalculateLength();
             }
 
