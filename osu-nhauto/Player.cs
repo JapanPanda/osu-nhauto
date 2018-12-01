@@ -108,7 +108,7 @@ namespace osu_nhauto
                         }
                         AutoPilot(currHitObject, currentTime - lastTime);
 
-                        if (currHitObject.Time - currentTime <= 0)
+                        if (currHitObject.Time - currentTime <= 15)
                         {
                             if (currHitObject != lastHitObject)
                             {
@@ -287,6 +287,16 @@ namespace osu_nhauto
                 velocity.Multiply(1.0f / offset);
         }
 
+        private Double GetDecimal()
+        {
+            double num1 = 1 - rand.NextDouble();
+            double num2 = 1 - rand.NextDouble();
+            double randStdNorm = Math.Sqrt(-2.0 * Math.Log(num1)) * Math.Sin(2.0 * Math.PI * num2);
+            double randNormal = 10 + randStdNorm;
+            Console.WriteLine(randNormal);
+            return randNormal;
+        }
+
         private void Relax(HitObject currHitObject, HitObject lastHitObject, ref bool shouldPressSecondary)
         {
             if (!relaxRunning)
@@ -294,15 +304,19 @@ namespace osu_nhauto
 
             shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < beatmap.TimeDiffThreshold ? !shouldPressSecondary : false;
             keyPressed = shouldPressSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
-            inputSimulator.Keyboard.KeyDown(shouldPressSecondary ? keyCode2 : keyCode1);
-            //Thread.Sleep(2);
             bool pressedSecondary = shouldPressSecondary;
-            Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
+            Task.Delay((int)GetDecimal()).ContinueWith(sec =>
             {
-                inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
-                if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
-                    keyPressed = KeyPressed.None;
+                inputSimulator.Keyboard.KeyDown(pressedSecondary ? keyCode2 : keyCode1);
+
+                Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
+                {
+                    inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
+                    if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
+                        keyPressed = KeyPressed.None;
+                });
             });
+            //Thread.Sleep(2);
         }
 
         private void GetVelocities(HitObject currHitObject)
