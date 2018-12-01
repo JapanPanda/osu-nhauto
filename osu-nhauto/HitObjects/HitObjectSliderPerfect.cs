@@ -46,15 +46,16 @@ namespace osu_nhauto.HitObjects
                     endAngle -= TWO_PI;
             }
 
-            circleRadius = (float)Math.Sqrt(Math.Pow(X - circleCenter.X, 2) + Math.Pow(Y - circleCenter.Y, 2));
+            circleRadius = circleCenter.Distance(X, Y);
             float arcAngle = (float)PixelLength / circleRadius;
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
+            circleCenter.Subtract(X, Y);
         }
 
         protected override Vec2Float CalculateOffset(int currentTime)
         {
             float currAngle = startAngle + (endAngle - startAngle) * GetTimeDiff(currentTime) / PathTime;
-            return new Vec2Float(circleCenter.X - X + circleRadius * (float)Math.Cos(currAngle), circleCenter.Y - Y + circleRadius * (float)Math.Sin(currAngle));
+            return new Vec2Float(circleCenter.X + circleRadius * (float)Math.Cos(currAngle), circleCenter.Y + circleRadius * (float)Math.Sin(currAngle));
         }
     }
 }
