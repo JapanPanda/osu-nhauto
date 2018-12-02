@@ -6,6 +6,7 @@ namespace osu_nhauto.HitObjects
     {
         public int X { get; set; }
         public int Y { get; set; }
+        public Vec2Float Position { get => new Vec2Float(X, Y); }
         public int Time { get; protected set; }
         public int EndTime { get; set; }
         public int StackHeight { get; set; }

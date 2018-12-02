@@ -104,12 +104,13 @@ namespace osu_nhauto
                         }
                         AutoPilot(currHitObject, currentTime - lastTime);
 
-                        if (!shouldGetVelocitiesBeforeClick && currHitObject.Time - currentTime <= 20 - randomLate)
+                        if (!shouldGetVelocitiesBeforeClick && currentTime - currHitObject.Time >= randomLate)
                         {
                             if (currHitObject != lastHitObject)
                             {
-                                randomLate = GetDecimal();
-                                Relax(currHitObject, lastHitObject, ref shouldPressSecondary);
+                                if (!Relax(currHitObject, lastHitObject, ref shouldPressSecondary))
+                                    continue;
+                                
                                 lastHitObject = currHitObject;
                             }
 
@@ -119,6 +120,9 @@ namespace osu_nhauto
                                 {
                                     currHitObject = hitObjIterator.Current;
                                     shouldGetVelocitiesBeforeClick = true;
+                                    randomLate = currHitObject.Type != HitObjectType.Spinner ? GetDecimal() : avgHumanReaction;
+                                    if (currHitObject.Type != HitObjectType.Spinner && lastHitObject != null && lastHitObject.Type == HitObjectType.Spinner)
+                                        velocity.Zero();
                                 }
                                 else
                                     break;
@@ -281,14 +285,16 @@ namespace osu_nhauto
             double num1 = 1 - rand.NextDouble();
             double num2 = 1 - rand.NextDouble();
             double randStdNorm = Math.Sqrt(-2.0 * Math.Log(num1)) * Math.Sin(2.0 * Math.PI * num2);
-            double randNormal = 10 + randStdNorm;
-            return randNormal;
+            return 4.5 * randStdNorm;
         }
 
-        private void Relax(HitObject currHitObject, HitObject lastHitObject, ref bool shouldPressSecondary)
+        private bool Relax(HitObject currHitObject, HitObject lastHitObject, ref bool shouldPressSecondary)
         {
             if (!relaxRunning)
-                return;
+                return true;
+
+            if (GetDistanceVectorFromObject(currHitObject).Length() > beatmap.CirclePxRadius && currentTime - currHitObject.Time <= beatmap.JudgementWindowSize)
+                return false;
 
             shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < beatmap.TimeDiffThreshold ? !shouldPressSecondary : false;
             bool pressedSecondary = shouldPressSecondary;
@@ -298,13 +304,13 @@ namespace osu_nhauto
             keyPressed = pressedSecondary ? KeyPressed.Key2 : KeyPressed.Key1;
             inputSimulator.Keyboard.KeyDown(pressedSecondary ? keyCode2 : keyCode1);
 
-            Task.Delay((int)Math.Max((currHitObject.EndTime - currHitObject.Time) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
+            Task.Delay((int)Math.Max((currHitObject.EndTime - currentTime) / beatmap.SpeedModifier, 16)).ContinueWith(ant =>
             {
                 inputSimulator.Keyboard.KeyUp(pressedSecondary ? keyCode2 : keyCode1);
                 if ((pressedSecondary && keyPressed == KeyPressed.Key2) || (!pressedSecondary && keyPressed == KeyPressed.Key1))
                     keyPressed = KeyPressed.None;
             });
-            //Thread.Sleep(2);
+            return true;
         }
 
         private void GetVelocities(HitObject currHitObject)
@@ -327,7 +333,7 @@ namespace osu_nhauto
                 return;
             }
             sliderBallRandSettings.Zero();
-            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? (currHitObject.Type == HitObjectType.Normal ? 1 : 15) : 50);
+            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? 5 : 65);
             velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Min(250, Math.Max(1, timeDiff)));
         }
 
