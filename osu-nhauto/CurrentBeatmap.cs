@@ -187,7 +187,7 @@ namespace osu_nhauto {
 
         private void ApplyHumanStuff()
         {
-            int offsetBoundary = Math.Max(4, (int)(CirclePxRadius / 2.5f));
+            int offsetBoundary = Math.Max(4, (int)(CirclePxRadius / 7.5f));
             Random rand = new Random();
             Vector2? lastUnmodifiedPos = null;
             Vector2 randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
@@ -202,7 +202,8 @@ namespace osu_nhauto {
                     randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
                 else
                 {
-                    hitObjects[i].Streamable = true;
+                    if (hitObjects[i].Position.Distance(hitObjects[i - 1].Position) <= 60)
+                        hitObjects[i].Streamable = true;
                     randOffset.X += rand.Next(-1 - randOffset.X, 1 - randOffset.X);
                     randOffset.Y += rand.Next(-1 - randOffset.Y, 1 - randOffset.Y);
                 }
@@ -235,10 +236,10 @@ namespace osu_nhauto {
 
                     if (slider.PixelLength <= CirclePxRadius || slider.Duration <= projOffset)
                         slider.TreatAsCircle = 2;
-                    else if (distToBall <= SliderBallPxRadius / 1.75f)
+                    else if (distToBall <= SliderBallPxRadius - 10)
                         slider.TreatAsCircle = 1;
 
-                    if (slider is nhauto.HitObjectSliderPerfect && (slider as nhauto.HitObjectSliderPerfect).circleRadius < SliderBallPxRadius / 3)
+                    if (slider is nhauto.HitObjectSliderPerfect && !(slider as nhauto.HitObjectSliderPerfect).TreatAsLinear && (slider as nhauto.HitObjectSliderPerfect).circleRadius < SliderBallPxRadius / 3)
                         slider.TreatAsCircle = 2;
 
                     if (slider is nhauto.HitObjectSliderBezier && !(slider as nhauto.HitObjectSliderBezier).TreatAsLinear && (slider as nhauto.HitObjectSliderBezier).maxDistFromHead < SliderBallPxRadius)
@@ -251,8 +252,7 @@ namespace osu_nhauto {
                             stop -= 4;
                         slider.timeStop = Math.Max(slider.Time, stop);
                     }
-
-                    if (slider.TreatAsCircle > 0 && slider.Duration <= TimeDiffThreshold / 2)
+                    else if (slider.TreatAsCircle > 0 && slider.Duration <= TimeDiffThreshold / 2)
                     {
                         slider.timeStop = slider.Time;
                         slider.timeStopFactor = 0;
@@ -379,6 +379,7 @@ namespace osu_nhauto {
         public float SpeedModifier { get; private set; } = 1;
         public float TimePreempt { get => ApproachRate == 5 ? 1200 : 1200 + (ApproachRate > 5 ? -750 : 600) * (ApproachRate - 5) / 5; }
         public float TimeFadeIn { get => TimePreempt * 2 / 3; }
+        public float JudgementWindowSize { get => 150 + 50 * (JudgementDifficulty - 5) / 5; }
         public int TimeDiffThreshold { get => (int)(116 * SpeedModifier); }
         public int? ModValue { get; private set; }
 
