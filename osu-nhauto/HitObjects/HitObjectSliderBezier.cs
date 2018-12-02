@@ -70,7 +70,6 @@ namespace osu_nhauto.HitObjects
             if (Math.Abs(cumSum) <= 15 && maxVertDistFromHead <= 40)
             {
                 TreatAsLinear = true;
-                Console.WriteLine($"{Time} => possible linear-like curve");
                 Vec2Float end = CalculateOffset(Time + (int)PathTime);
                 PixelLength = end.Length();
                 calculatedPath.Clear();
