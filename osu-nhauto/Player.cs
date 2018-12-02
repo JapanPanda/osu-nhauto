@@ -88,7 +88,7 @@ namespace osu_nhauto
             while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - avgHumanReaction) { Thread.Sleep(1); }
             Console.WriteLine("Now listening for time changes");
             int lastTime = MainWindow.osu.GetAudioTime();
-            double randomLate = GetDecimal();
+            double randomLate = GetNextRandomError();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 Thread.Sleep(1);
@@ -120,7 +120,7 @@ namespace osu_nhauto
                                 {
                                     currHitObject = hitObjIterator.Current;
                                     shouldGetVelocitiesBeforeClick = true;
-                                    randomLate = currHitObject.Type != HitObjectType.Spinner ? GetDecimal() : avgHumanReaction;
+                                    randomLate = currHitObject.Type != HitObjectType.Spinner ? GetNextRandomError() : avgHumanReaction;
                                     if (currHitObject.Type != HitObjectType.Spinner && lastHitObject != null && lastHitObject.Type == HitObjectType.Spinner)
                                         velocity.Zero();
                                 }
@@ -280,7 +280,7 @@ namespace osu_nhauto
                 velocity.Multiply(1.0f / offset);
         }
 
-        private Double GetDecimal()
+        private double GetNextRandomError()
         {
             double num1 = 1 - rand.NextDouble();
             double num2 = 1 - rand.NextDouble();
