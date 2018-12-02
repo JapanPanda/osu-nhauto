@@ -10,6 +10,9 @@ namespace osu_nhauto.HitObjects
         public readonly float circleRadius;
         private readonly float startAngle;
         private readonly float endAngle;
+        private Vec2Float? linearApproximation = null;
+
+        public bool TreatAsLinear { get { return linearApproximation.HasValue; } }
 
         public HitObjectSliderPerfect(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
@@ -26,7 +29,7 @@ namespace osu_nhauto.HitObjects
             }
             catch (Exception)
             {
-                throw new Exception();
+                throw new Exception("parallel");
             }
 
             float midAngle = (float)Math.Atan2(Points[0].Y - circleCenter.Y, Points[0].X - circleCenter.X);
@@ -50,10 +53,24 @@ namespace osu_nhauto.HitObjects
             float arcAngle = (float)PixelLength / circleRadius;
             endAngle = endAngle > startAngle ? startAngle + arcAngle : startAngle - arcAngle;
             circleCenter.Subtract(X, Y);
+
+            Vec2Float endPt = CalculateOffset(Time + (int)PathTime);
+            float lineLength = endPt.Length();
+            if (PixelLength - lineLength <= 12.5)
+            {
+                float angle = (float)Math.Atan2(endPt.Y, endPt.X);
+                linearApproximation = new Vec2Float((float)Math.Cos(angle), (float)Math.Sin(angle));
+                PixelLength = lineLength;
+            }
         }
 
         protected override Vec2Float CalculateOffset(int currentTime)
         {
+            if (linearApproximation.HasValue)
+            {
+                float expectedPosition = (float)PixelLength * GetTimeDiff(currentTime) / PathTime;
+                return new Vec2Float(expectedPosition * linearApproximation.Value.X, expectedPosition * linearApproximation.Value.Y);
+            }
             float currAngle = startAngle + (endAngle - startAngle) * GetTimeDiff(currentTime) / PathTime;
             return new Vec2Float(circleCenter.X + circleRadius * (float)Math.Cos(currAngle), circleCenter.Y + circleRadius * (float)Math.Sin(currAngle));
         }
