@@ -88,7 +88,7 @@ namespace osu_nhauto
             while (MainWindow.osu.GetAudioTime() <= currHitObject.Time - avgHumanReaction) { Thread.Sleep(1); }
             Console.WriteLine("Now listening for time changes");
             int lastTime = MainWindow.osu.GetAudioTime();
-            double randomLate = GetNextRandomError();
+            randomLate = GetNextRandomError();
             while (MainWindow.statusHandler.GetGameState() == GameState.Playing)
             {
                 Thread.Sleep(1);
@@ -120,7 +120,7 @@ namespace osu_nhauto
                                 {
                                     currHitObject = hitObjIterator.Current;
                                     shouldGetVelocitiesBeforeClick = true;
-                                    randomLate = currHitObject.Type != HitObjectType.Spinner ? GetNextRandomError() : avgHumanReaction;
+                                    randomLate = currHitObject.Type != HitObjectType.Spinner ? GetNextRandomError() : 0;
                                     if (currHitObject.Type != HitObjectType.Spinner && lastHitObject != null && lastHitObject.Type == HitObjectType.Spinner)
                                         velocity.Zero();
                                 }
@@ -204,13 +204,14 @@ namespace osu_nhauto
                 ellipseTranslation.Y += rand.Next(-8 - (int)ellipseTranslation.Y, 8 - (int)ellipseTranslation.Y) * ResolutionUtils.Ratio.Y;
             }
 
+            Vec2Float signs = new Vec2Float(Math.Sign(66 - ellipseRadii.X), Math.Sign(55 - ellipseRadii.Y));
+            ellipseRadii.X += signs.X * Math.Max(5, ellipseRadii.X / 16);
+            ellipseRadii.Y += signs.Y * Math.Max(5, ellipseRadii.Y / 16);
+
             float xn = ellipseRadii.X * (float)Math.Cos(ellipseAngle) * ResolutionUtils.Ratio.X;
             float yn = -ellipseRadii.Y * (float)Math.Sin(ellipseAngle) * ResolutionUtils.Ratio.Y;
             float x = xn * ellipseRotation.X - yn * ellipseRotation.Y;
             float y = xn * ellipseRotation.Y + yn * ellipseRotation.X;
-            Vec2Float signs = new Vec2Float(Math.Sign(66 - ellipseRadii.X), Math.Sign(55 - ellipseRadii.Y));
-            ellipseRadii.X += signs.X * 5;
-            ellipseRadii.Y += signs.Y * 5;
             ellipseAngle += ANGLE_INCREMENT;
 
             velocity.X = x - cursorPos.X + center.X + ellipseTranslation.X;
@@ -253,7 +254,7 @@ namespace osu_nhauto
                 case HitObjectType.Spinner:
                     velocity.Zero();
                     missing.Zero();
-                    if (currentTime >= currHitObject.Time - 50)
+                    if (currentTime >= currHitObject.Time - beatmap.TimeFadeIn)
                         AutoPilotSpinner();
                     break;
             }
@@ -285,7 +286,7 @@ namespace osu_nhauto
             double num1 = 1 - rand.NextDouble();
             double num2 = 1 - rand.NextDouble();
             double randStdNorm = Math.Sqrt(-2.0 * Math.Log(num1)) * Math.Sin(2.0 * Math.PI * num2);
-            return 4.5 * randStdNorm;
+            return 5 * randStdNorm;
         }
 
         private bool Relax(HitObject currHitObject, HitObject lastHitObject, ref bool shouldPressSecondary)
@@ -293,7 +294,9 @@ namespace osu_nhauto
             if (!relaxRunning)
                 return true;
 
-            if (GetDistanceVectorFromObject(currHitObject).Length() > beatmap.CirclePxRadius && currentTime - currHitObject.Time <= beatmap.JudgementWindowSize)
+            if (currHitObject.Type != HitObjectType.Spinner
+                && GetDistanceVectorFromObject(currHitObject).Length() > beatmap.CirclePxRadius * ResolutionUtils.Ratio.X
+                && currentTime - currHitObject.Time <= beatmap.JudgementWindowSize)
                 return false;
 
             shouldPressSecondary = lastHitObject != null && currHitObject.Time - lastHitObject.EndTime < beatmap.TimeDiffThreshold ? !shouldPressSecondary : false;
@@ -329,11 +332,13 @@ namespace osu_nhauto
                 ellipseRotation = new Vec2Float(1, 0);
                 ellipseRotAngle = 0;
                 ellipseAngle = Math.Atan2(center.Y - cursorPos.Y, cursorPos.X - center.X);
+                while (ellipseAngle < 0)
+                    ellipseAngle += TWO_PI;
                 velocity.Zero();
                 return;
             }
             sliderBallRandSettings.Zero();
-            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? 5 : 65);
+            int timeDiff = currHitObject.Time - currentTime - (currHitObject.Streamable ? 5 : 65) - (int)Math.Abs(randomLate);
             velocity = GetDistanceVectorFromObject(currHitObject).Multiply(1.0f / Math.Min(250, Math.Max(1, timeDiff)));
         }
 
@@ -381,6 +386,7 @@ namespace osu_nhauto
         private Vec2Float ellipseRotation, ellipseTranslation;
         private Vec2Float sliderBallRandSettings;
         private float ellipseRotAngle = 0.79f;
+        private double randomLate = 0;
         private int currentTime;
         private KeyPressed keyPressed = KeyPressed.None;
 
