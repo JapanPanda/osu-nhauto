@@ -13,12 +13,14 @@ namespace osu_nhauto.HitObjects
         private Vec2Float[] subdivisionBuffer1;
         private Vec2Float[] subdivisionBuffer2;
 
+        private Vec2Float? linearApproximation = null;
+
         private const float bezier_tolerance = 0.0625f;
         private int count;
 
         public float maxDistFromHead = 0;
 
-        public bool TreatAsLinear { get; private set; }
+        public bool TreatAsLinear { get => linearApproximation.HasValue; }
 
         public HitObjectSliderBezier(osu_database_reader.Components.HitObjects.HitObjectSlider hollyObj, float sliderVelocity, 
             List<TimingPoint> timingPoints, bool vInvert) : base(hollyObj, sliderVelocity, timingPoints, vInvert)
@@ -44,43 +46,30 @@ namespace osu_nhauto.HitObjects
             CalculateLength();
             if (calculatedPath.Count == 0)
                 return;
-
-            double cumSum = 0;
-            Vec2Float baseVel = CalculateOffset(Time + 1);
-            Vec2Float endVel = CalculateOffset(Time + (int)PathTime).Subtract(CalculateOffset(Time + (int)PathTime - 1));
-            double angleRot = Math.Atan2(-baseVel.Y, baseVel.X);
-            double angleRot2 = Math.Atan2(-endVel.Y, endVel.X);
-            double maxVertDistFromHead = 0;
-            for (int i = Time + 2; i < Time + (int)PathTime - 1; i += 8)
+            
+            for (int i = 1; i < PathTime; i += 8)
             {
-                Vec2Float offset = CalculateOffset(i);
-                Vec2Float offsetE = CalculateOffset(Time + (int)PathTime - i);
-                Vec2Float offsetD = offset.Clone().Subtract(baseVel);
-                maxDistFromHead = Math.Max(maxDistFromHead, offset.Length());               
-                Vec2Float rotBase = new Vec2Float(offsetD.X * (float)Math.Cos(angleRot) - offsetD.Y * (float)Math.Sin(angleRot), offsetD.X * (float)Math.Sin(angleRot) + offsetD.Y * (float)Math.Cos(angleRot));
-                Vec2Float offsetED = endVel.Clone().Subtract(offsetE);
-                Vec2Float rotEnd = new Vec2Float(offsetED.X * (float)Math.Cos(angleRot2) - offsetED.Y * (float)Math.Sin(angleRot2), offsetED.X * (float)Math.Sin(angleRot2) + offsetED.Y * (float)Math.Cos(angleRot2));
-                double rotY0 = offset.X * Math.Sin(angleRot) + offset.Y * Math.Cos(angleRot);
-                maxVertDistFromHead = Math.Max(maxVertDistFromHead, Math.Abs(rotY0));
-                cumSum += rotBase.Y - rotEnd.Y;
-                baseVel = offset;
-                endVel = offsetE;
+                Vec2Float nextOffset = CalculateOffset(Time + i);
+                maxDistFromHead = Math.Max(maxDistFromHead, nextOffset.Length());
             }
 
-            if (Math.Abs(cumSum) <= 15 && maxVertDistFromHead <= 40)
+            Vec2Float endPt = CalculateOffset(Time + (int)PathTime);
+            float lineLength = endPt.Length();
+            if (PixelLength - lineLength <= 35)
             {
-                TreatAsLinear = true;
-                Vec2Float end = CalculateOffset(Time + (int)PathTime);
-                PixelLength = end.Length();
-                calculatedPath.Clear();
-                calculatedPath.AddRange(ApproximateBezier(new List<Vec2Float>(3) { new Vec2Float(0, 0), end, end }));
-                CalculateLength();
+                float angle = (float)Math.Atan2(endPt.Y, endPt.X);
+                linearApproximation = new Vec2Float((float)Math.Cos(angle), (float)Math.Sin(angle));
+                PixelLength = lineLength;
             }
-
         }
 
         protected override Vec2Float CalculateOffset(int currentTime)
         {
+            if (TreatAsLinear)
+            {
+                float expectedPosition = (float)PixelLength * GetTimeDiff(currentTime) / PathTime;
+                return new Vec2Float(expectedPosition * linearApproximation.Value.X, expectedPosition * linearApproximation.Value.Y);
+            }
             double d = GetTimeDiff(currentTime) / PathTime * PixelLength;
             return InterpolateVertices(IndexOfDistance(d), d);
         }

@@ -202,7 +202,7 @@ namespace osu_nhauto {
                     randOffset = new Vector2(rand.Next(-offsetBoundary, offsetBoundary), rand.Next(-offsetBoundary, offsetBoundary));
                 else
                 {
-                    if (hitObjects[i].Position.Distance(hitObjects[i - 1].Position) <= 60)
+                    if (hitObjects[i].Position.Distance(hitObjects[i - 1].Position) <= 100)
                         hitObjects[i].Streamable = true;
                     randOffset.X += rand.Next(-1 - randOffset.X, 1 - randOffset.X);
                     randOffset.Y += rand.Next(-1 - randOffset.Y, 1 - randOffset.Y);
@@ -232,7 +232,7 @@ namespace osu_nhauto {
                             slider.timeStopFactor = Math.Min(slider.timeStopFactor, 0.95f * (float)angle / 2.79f); // 2.3562
                     }
 
-                    float distToBall = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - projOffset).Distance(slider.GetRelativePosition(slider.Time));
+                    float distToBall = slider.GetRelativePosition(slider.Time + (int)slider.PathTime - projOffset).Length();
 
                     if (slider.PixelLength <= CirclePxRadius || slider.Duration <= projOffset)
                         slider.TreatAsCircle = 2;
@@ -242,7 +242,7 @@ namespace osu_nhauto {
                     if (slider is nhauto.HitObjectSliderPerfect && !(slider as nhauto.HitObjectSliderPerfect).TreatAsLinear && (slider as nhauto.HitObjectSliderPerfect).circleRadius < SliderBallPxRadius / 3)
                         slider.TreatAsCircle = 2;
 
-                    if (slider is nhauto.HitObjectSliderBezier && !(slider as nhauto.HitObjectSliderBezier).TreatAsLinear && (slider as nhauto.HitObjectSliderBezier).maxDistFromHead < SliderBallPxRadius)
+                    if (slider is nhauto.HitObjectSliderBezier && !(slider as nhauto.HitObjectSliderBezier).TreatAsLinear && (slider as nhauto.HitObjectSliderBezier).maxDistFromHead < SliderBallPxRadius / 3)
                         slider.TreatAsCircle = 1;
 
                     if (slider.TreatAsCircle == 0 && !slider.timeStop.HasValue)
