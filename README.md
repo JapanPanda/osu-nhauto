@@ -17,4 +17,4 @@ It has the following features:
 [![nhauto video 2](https://img.youtube.com/vi/iYBuQZdAk8Q/0.jpg)](https://www.youtube.com/watch?v=iYBuQZdAk8Q)
 
 ## Who made this?
-Two bored college students.
+Two bored college students. Special thanks to @erictran0.
